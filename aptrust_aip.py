@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 # TODO better error handling than printing to the screen. Log and/or move.
 
@@ -134,25 +135,32 @@ def add_bag_metadata(aip_id):
     """Add required fields to bagit-info.txt and add new file aptrust-info.txt"""
 
     # Get metadata from the preservation.xml.
+    ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
+    tree = ET.parse(f"{aip_id}_bag/data/metadata/{aip_id}_preservation.xml")
+    root = tree.getroot()
+    title = root.find("dc:title", ns).text
+
+    # TODO: is there a simpler way to find this without an absolute path from root?
+    collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
     # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
     # TODO: confirm that only include Bag-Count if there is more than one.
     bag = bagit.Bag(f"{aip_id}_bag")
     bag.info['Source-Organization'] = "University of Georgia"
-    bag.info['Internal-Sender-Description'] = "SOMETHING TBD"
+    bag.info['Internal-Sender-Description'] = "SOMETHING TBD. Department? That isn't in the metadata anywhere"
     bag.info['Internal-Sender-Identifier'] = aip_id
-    bag.info['Bag-Group-Identifier'] = "TBD: Collection Identifier from preservation.xml if has it"
+    bag.info['Bag-Group-Identifier'] = collection
     bag.save()
 
     # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?)
     with open(f"{aip_id}_bag/aptrust-info.txt", "w") as new_file:
-        new_file.write("Title: The Title\n")
+        new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
-        new_file.write("Storage: Deep Archive\n")
+        new_file.write("Storage-Option: Deep Archive\n")
 
     # Validate the bag
-    validate_bag(f"{aip_id}_bag")
+    #validate_bag(f"{aip_id}_bag")
 
 
 # PACKAGE THE BAG
