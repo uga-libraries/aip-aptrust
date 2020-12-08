@@ -11,24 +11,24 @@ import subprocess
 import sys
 
 
-def unpackage(aip, id):
-    """Unpackage the AIP that is stored in ARCHive. Unzips, untars, removes size from the bag directory name.
-    The result is still a bag."""
-    # TODO could validate the bag at this stage in case there was an undetected problem during storage.
+def unpackage(aip_zip, id):
+    """Unpackage the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
+    The file size is just part of the aip_zip name, so it is automatically removed by extracting the bag. """
 
     # Extracts the contents of the zip file, which is a tar file.
-    subprocess.run(f"7z x {aip}", stdout=subprocess.DEVNULL, shell=True)
+    subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory.
-    # Calculates the name  of the tar file before can extract.
-    tar = aip.replace(".bz2", "")
-    subprocess.run(f"7z x {tar}", stdout=subprocess.DEVNULL, shell=True)
+    # Calculates the name of the tar file by removing the .bz2 extension to be able to extract.
+    aip_tar = aip_zip.replace(".bz2", "")
+    subprocess.run(f"7z x {aip_tar}", stdout=subprocess.DEVNULL, shell=True)
 
-    # Deletes the .tar.bz2 and .tar files.
+    # Deletes the aip_tar.bz2 and aip.tar files. All that is needed is the AIP's bag directory.
+    os.remove(aip_zip)
+    os.remove(aip_tar)
 
-    # Remove the file size from the bag directory name. os.replace()
-
-# Validate bag? validate_bag()
+    # Validates the bag in case there was an undetected problem during storage.
+    validate_bag(f"{id}_bag")
 
 
 # VALIDATE AGAINST APTRUST REQUIREMENTS
@@ -88,6 +88,7 @@ def make_bag(aip_id):
 
 def validate_bag(aip):
     """Validates the bag. If it is not valid, prints the error."""
+    # TODO better error handling than printing to the screen. Log and/or move.
 
     new_bag = bagit.Bag(aip)
     try:
@@ -127,19 +128,18 @@ except (IndexError, FileNotFoundError):
 for item in os.listdir():
 
     # Skip anything that isn't an AIP
-    # TODO: BMAC can sometimes be just tar or just zip; check the documentation.
+    # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
     if not item.endswith(".tar.bz2"):
         continue
 
-    print("Processing:", item)
+    print("\nProcessing:", item)
 
     # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
     # TODO: once see how the script uses this, may decide to leave _bag as part of it.
     regex = re.match("^(.*)_bag", item)
     aip_id = regex.group(1)
-    print(aip_id)
 
-    # Unpackage the tar and zip, and remove the size from the bag directory name.
+    # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
     # TODO: handle BMAC that don't have both.
     unpackage(item, aip_id)
 
