@@ -45,21 +45,41 @@ def size_check(aip):
             bag_size += os.path.getsize(file_path)
 
     # Evaluate if the size is above the 5 TB limit.
-    return bag_size <= 5000000000000
+    return bag_size < 5000000000000
 
 
-# File and directory names must not contain illegal characters and must be a maximum of 255 characters.
-def validate_names(aip):
-    """Outline for a function that will be needed."""
+def character_check(aip):
+    """File and directory names must not contain illegal characters and must be a maximum of 255 characters."""
+    # TODO log or fix the error. For now, just working on catching them.
 
-    for root, directories, files in os.walk(aip):
-        pass
+    # List of special characters that are not permitted.
+    # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
+    # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ascii codes.
+    not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
-        # No file or directory name can start with a dash.
+    for root, directories, files in os.walk(f"{aip}_bag"):
 
-        # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
+        # No file or directory name can start with a dash or include any of the not permitted characters.
+        # Directories excludes the AIP folder, so test both root (to get the AIP folder) and directories.
+        if root.startswith("-") or any(char in root for char in not_permitted):
+            return False
 
-        # No file or directory name can exceed 255 characters, including extension.
+        for directory in directories:
+            if directory.startswith("-") or any(char in directory for char in not_permitted):
+                return False
+
+        for file in files:
+            if file.startswith("-") or any(char in file for char in not_permitted):
+                return False
+
+            # No file or directory name can exceed 255 characters, including extension.
+            # TODO: clarify if this means the entire path, like I've calculated, or individual file and directory names.
+            path = os.path.join(root, file)
+            if len(path) > 255:
+                return False
+
+    # If no error was encountered, return True
+    return True
 
 
 # If anything was changed, undo and redo the bag.
@@ -138,24 +158,34 @@ except (IndexError, FileNotFoundError):
 # Get each AIP and transform it into an APTrust-compatible AIP.
 for item in os.listdir():
 
-    # Skip anything that isn't an AIP
-    # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
-    if not item.endswith(".tar.bz2"):
-        continue
+    # # Skip anything that isn't an AIP
+    # # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
+    # if not item.endswith(".tar.bz2"):
+    #     continue
 
     print("\nProcessing:", item)
 
-    # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
-    # TODO: once see how the script uses this, may decide to leave _bag as part of it.
-    regex = re.match("^(.*)_bag", item)
-    aip_id = regex.group(1)
+    # # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
+    # # TODO: once see how the script uses this, may decide to leave _bag as part of it.
+    # regex = re.match("^(.*)_bag", item)
+    # aip_id = regex.group(1)
 
-    # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
-    # TODO: handle BMAC that don't have both.
-    unpackage(item, aip_id)
+    # This is just for testing.
+    aip_id = item.replace("_bag", "")
 
-    # Validate against APTrust requirements and correct if they are not met.
-    size_ok = size_check(aip_id)
-    if not size_ok:
-        print("This AIP is above the 5TB limit and must be split")
+    # # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
+    # # TODO: handle BMAC that don't have both.
+    # unpackage(item, aip_id)
+
+    # # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
+    # size_ok = size_check(aip_id)
+    # if not size_ok:
+    #     print("This AIP is above the 5TB limit and must be split")
+    #     continue
+
+    # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
+    # TODO: replace the invalid characters instead? Would need users to agree.
+    character_check_ok = character_check(aip_id)
+    if not character_check_ok:
+        print("This AIP has invalid characters")
         continue
