@@ -4,6 +4,7 @@
 # To determine: APTrust does not maintain versions. If we submit another AIP with the same ID, just a later version,
 # it overwrites the original. Is that desired or do we add version number to the AIP ID?
 
+import bagit
 import os
 
 # UNPACKAGE THE AIP
@@ -56,6 +57,29 @@ def undo_bag(bag):
     if bag.endswith('_bag'):
         new_name = bag.replace('_bag', '')
         os.replace(bag, new_name)
+
+
+def make_bag(aip_id):
+    """Creates a bag and renames to add _bag to the folder."""
+
+    # Bags the AIP folder in place. Both md5 and sha256 checksums are generated to guard against tampering.
+    bagit.make_bag(aip_id, checksums=['md5', 'sha256'])
+
+    # Renames the AIP folder to add _bag to the end of the folder name.
+    new_aip_name = f'{aip_id}_bag'
+    os.replace(aip_id, new_aip_name)
+
+
+def validate_bag(aip):
+    """Validates the bag. If it is not valid, prints the error."""
+
+    new_bag = bagit.Bag(aip)
+    try:
+        new_bag.validate()
+        print("bag is valid")
+    except bagit.BagValidationError as e:
+        print("bag invalid")
+        print(e)
 
 
 # UPDATE THE BAG METADATA
