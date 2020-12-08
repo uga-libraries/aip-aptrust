@@ -130,12 +130,29 @@ def validate_bag(aip):
         print(e)
 
 
-# UPDATE THE BAG METADATA
-# https://github.com/LibraryOfCongress/bagit-python, in readme see "Update Bag Manifests"
+def add_bag_metadata(aip_id):
+    """Add required fields to bagit-info.txt and add new file aptrust-info.txt"""
 
-# Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?)
+    # Get metadata from the preservation.xml.
 
-# Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
+    # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
+    # TODO: confirm that only include Bag-Count if there is more than one.
+    bag = bagit.Bag(f"{aip_id}_bag")
+    bag.info['Source-Organization'] = "University of Georgia"
+    bag.info['Internal-Sender-Description'] = "SOMETHING TBD"
+    bag.info['Internal-Sender-Identifier'] = aip_id
+    bag.info['Bag-Group-Identifier'] = "TBD: Collection Identifier from preservation.xml if has it"
+    bag.save()
+
+    # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?)
+    with open(f"{aip_id}_bag/aptrust-info.txt", "w") as new_file:
+        new_file.write("Title: The Title\n")
+        new_file.write("Description: TBD\n")
+        new_file.write("Access: Institution\n")
+        new_file.write("Storage: Deep Archive\n")
+
+    # Validate the bag
+    validate_bag(f"{aip_id}_bag")
 
 
 # PACKAGE THE BAG
@@ -163,6 +180,10 @@ for item in os.listdir():
     # if not item.endswith(".tar.bz2"):
     #     continue
 
+    # This is just for testing
+    if item == "copy of test files":
+        continue
+
     print("\nProcessing:", item)
 
     # # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
@@ -183,9 +204,12 @@ for item in os.listdir():
     #     print("This AIP is above the 5TB limit and must be split")
     #     continue
 
-    # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
-    # TODO: replace the invalid characters instead? Would need users to agree.
-    character_check_ok = character_check(aip_id)
-    if not character_check_ok:
-        print("This AIP has invalid characters")
-        continue
+    # # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
+    # # TODO: replace the invalid characters instead? Would need users to agree.
+    # character_check_ok = character_check(aip_id)
+    # if not character_check_ok:
+    #     print("This AIP has invalid characters")
+    #     continue
+
+    # Updates the bag metadata files.
+    add_bag_metadata(aip_id)
