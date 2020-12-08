@@ -10,6 +10,8 @@ import re
 import subprocess
 import sys
 
+# TODO better error handling than printing to the screen. Log and/or move.
+
 
 def unpackage(aip_zip, id):
     """Unpackage the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
@@ -31,10 +33,20 @@ def unpackage(aip_zip, id):
     validate_bag(f"{id}_bag")
 
 
-# VALIDATE AGAINST APTRUST REQUIREMENTS
+def size_check(aip):
+    """Bag must be under 5 TB. Returns True or False"""
+    # TODO: want this function to split if it is too large or leave for staff to do?
 
-# Bag must be under 5 TB. If not, need to spit.
-# Getting the size of a file: os.path.getsize(FILEPATH)
+    # Calculate the size, in bytes, of the bag by adding the size of each file in the bag.
+    bag_size = 0
+    for root, dirs, files in os.walk(f"{aip}_bag"):
+        for file in files:
+            file_path = os.path.join(root, file)
+            bag_size += os.path.getsize(file_path)
+
+    # Evaluate if the size is above the 5 TB limit.
+    return bag_size <= 5000000000000
+
 
 # File and directory names must not contain illegal characters and must be a maximum of 255 characters.
 def validate_names(aip):
@@ -88,7 +100,6 @@ def make_bag(aip_id):
 
 def validate_bag(aip):
     """Validates the bag. If it is not valid, prints the error."""
-    # TODO better error handling than printing to the screen. Log and/or move.
 
     new_bag = bagit.Bag(aip)
     try:
@@ -143,3 +154,8 @@ for item in os.listdir():
     # TODO: handle BMAC that don't have both.
     unpackage(item, aip_id)
 
+    # Validate against APTrust requirements and correct if they are not met.
+    size_ok = size_check(aip_id)
+    if not size_ok:
+        print("This AIP is above the 5TB limit and must be split")
+        continue
