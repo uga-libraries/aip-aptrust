@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 
-def unpackage(aip):
+def unpackage(aip, id):
     """Unpackage the AIP that is stored in ARCHive. Unzips, untars, removes size from the bag directory name.
     The result is still a bag."""
     # TODO could validate the bag at this stage in case there was an undetected problem during storage.
@@ -20,6 +20,9 @@ def unpackage(aip):
     subprocess.run(f"7z x {aip}", stdout=subprocess.DEVNULL, shell=True)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory.
+    # Calculates the name  of the tar file before can extract.
+    tar = aip.replace(".bz2", "")
+    subprocess.run(f"7z x {tar}", stdout=subprocess.DEVNULL, shell=True)
 
     # Deletes the .tar.bz2 and .tar files.
 
@@ -138,5 +141,5 @@ for item in os.listdir():
 
     # Unpackage the tar and zip, and remove the size from the bag directory name.
     # TODO: handle BMAC that don't have both.
-    unpackage(item)
+    unpackage(item, aip_id)
 
