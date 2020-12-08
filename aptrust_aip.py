@@ -19,11 +19,19 @@ import os
 
 # Bag must be under 5 TB. If not, need to spit.
 
-# No file or directory name can start with a dash.
+# File and directory names must not contain illegal characters and must be a maximum of 255 characters.
+def validate_names(aip):
+    """Outline for a function that will be needed."""
 
-# No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
+    for root, directories, files in os.walk(aip):
+        pass
 
-# No file  or directory name can exceed 255 characters, including extension.
+        # No file or directory name can start with a dash.
+
+        # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
+
+        # No file or directory name can exceed 255 characters, including extension.
+
 
 # If anything was changed, undo and redo the bag.
 def undo_bag(bag):
