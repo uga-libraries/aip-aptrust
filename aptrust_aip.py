@@ -7,6 +7,7 @@
 import bagit
 import os
 import subprocess
+import sys
 
 
 # UNPACKAGE THE AIP
@@ -98,7 +99,28 @@ def validate_bag(aip):
 # Validate the bag:validate_bag()
 
 # Tar the bag
-aip = "todo"
-aips_directory = "todo"
-subprocess.run(f'7z -ttar a "{aip}.tar" "{aips_directory}/{aip}"', stdout=subprocess.DEVNULL, shell=True)
+# aip = "todo"
+# subprocess.run(f'7z -ttar a "{aip}.tar" "{aips_directory}/{aip}"', stdout=subprocess.DEVNULL, shell=True)
+
+# Get directory from script argument and make that the current directory.
+try:
+    aips_directory = sys.argv[1]
+    os.chdir(aips_directory)
+except (IndexError, FileNotFoundError):
+    print("The aips directory is either missing or not a valid directory.")
+    print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
+    exit()
+
+# Get each AIP and transform it into an APTrust-compatible AIP.
+for aip in os.listdir():
+
+    # Skip anything that isn't an AIP
+    # TODO: BMAC can sometimes be just tar or just zip; check the documentation.
+    if not aip.endswith(".tar.bz2"):
+        continue
+
+    print("Processing:", aip)
+
+    # Unpackage the tar and zip, and remove the size from the bag directory name.
+    # TODO: handle BMAC that don't have both.
 
