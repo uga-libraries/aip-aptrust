@@ -6,6 +6,8 @@
 
 import bagit
 import os
+import subprocess
+
 
 # UNPACKAGE THE AIP
 
@@ -92,8 +94,10 @@ def validate_bag(aip):
 
 # PACKAGE THE BAG
 
-# Validate the bag
+# Validate the bag (use validate_bag() again)
 
 # Tar the bag
-
+aip = "todo"
+aips_directory = "todo"
+subprocess.run(f'7z -ttar a "{aip}.tar" "{aips_directory}/{aip}"', stdout=subprocess.DEVNULL, shell=True)
 
