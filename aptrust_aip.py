@@ -13,14 +13,15 @@ import subprocess
 
 # Unzip and untar. Result is a bag.
 
-# Remove the file size from the bag name.
+# Remove the file size from the bag name. os.replace()
 
-# Validate bag?
+# Validate bag? validate_bag()
 
 
 # VALIDATE AGAINST APTRUST REQUIREMENTS
 
 # Bag must be under 5 TB. If not, need to spit.
+# Getting the size of a file: os.path.getsize(FILEPATH)
 
 # File and directory names must not contain illegal characters and must be a maximum of 255 characters.
 def validate_names(aip):
@@ -94,7 +95,7 @@ def validate_bag(aip):
 
 # PACKAGE THE BAG
 
-# Validate the bag (use validate_bag() again)
+# Validate the bag:validate_bag()
 
 # Tar the bag
 aip = "todo"
