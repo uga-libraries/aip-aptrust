@@ -39,6 +39,7 @@ def unpack(aip_zip, aip):
     os.remove(aip_tar)
 
     # Validates the bag in case there was an undetected problem during storage or unpacking.
+    # TODO: does this need to raise the ValueError again if not valid?
     validate_bag(aip, "Unpacking")
 
 
@@ -133,18 +134,22 @@ def make_bag(aip):
 
 def validate_bag(aip, step):
     """Validates the bag and logs the result. Record if valid or not for a record of the last time the bag was valid.
-    Validation errors do print to the terminal but they are also saved to the log. """
-    # TODO: end processing of the AIP if it does not validate.
+    Validation errors do print to the terminal but they are also saved to the log. If the bag is not valid,
+    raises an error so that the script knows to stop processing this AIP. """
 
     new_bag = bagit.Bag(aip)
     try:
         new_bag.validate()
         log(f"{step}: bag is valid.")
+
     except bagit.BagValidationError as errors:
-        log(f"{step}: bag is not valid.")
+        # Splits each error from the block of text so each error is saved on its own line in the log.
         error_list = str(errors).split("; ")
         for error in error_list:
             log(f"\n{error}")
+
+        # Error used for the script to stop processing this AIP.
+        raise ValueError
 
 
 def add_bag_metadata(aip):
@@ -195,47 +200,54 @@ except (IndexError, FileNotFoundError):
     print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
     exit()
 
-# # Get each AIP and transform it into an APTrust-compatible AIP.
-# # Results of each step are recorded in a log.
-# log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs on {datetime.date.today()}.")
-# for item in os.listdir():
-#
-#     log(f"\nSTARTING PROCESSING ON: {item}")
-#
-#     # Skip anything that isn't an AIP
-#     if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
-#         log("Not an AIP. Does not end with .tar.bz2 or .tar")
-#         continue
-#
-#     # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
-#     regex = re.match("^(.*_bag).", item)
-#     aip_bag = regex.group(1)
-#
-#     # Unpack the zip (if applicable) and tar file, resulting the bag directory.
-#     unpack(item, aip_bag)
-#
-#     # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
-#     size_ok = size_check(aip_bag)
-#     if not size_ok:
-#         log("This AIP is above the 5TB limit and must be split. Processing stopped.")
-#         continue
-#
-#     # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
-#     # TODO: replace the invalid characters instead? Would need users to agree.
-#     character_check_ok = character_check(aip_bag)
-#     if not character_check_ok:
-#         log("This AIP has invalid characters. Processing stopped.")
-#         continue
-#
-#     # Updates the bag metadata files.
-#     add_bag_metadata(aip_bag)
-#
-#     # Validates the bag.
-#     validate_bag(aip_bag, "Ready to tar")
-#
-#     # Tars the bag.
-#     subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
-#
-#     log("Processing complete.")
+# Get each AIP and transform it into an APTrust-compatible AIP.
+# Results of each step are recorded in a log.
+log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs on {datetime.date.today()}.")
+for item in os.listdir():
 
-validate_bag("test-999-er-123456_bag", "Testing")
+    log(f"\nSTARTING PROCESSING ON: {item}")
+
+    # Skip anything that isn't an AIP
+    if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
+        log("Not an AIP. Does not end with .tar.bz2 or .tar")
+        continue
+
+    # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
+    regex = re.match("^(.*_bag).", item)
+    aip_bag = regex.group(1)
+
+    # Unpack the zip (if applicable) and tar file, resulting in the bag directory.
+    # Stops processing this AIP if the bag is invalid.
+    try:
+        unpack(item, aip_bag)
+    except ValueError:
+        log("The unpacked bag is not valid. Processing stopped.")
+        continue
+
+    # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
+    size_ok = size_check(aip_bag)
+    if not size_ok:
+        log("This AIP is above the 5TB limit and must be split. Processing stopped.")
+        continue
+
+    # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
+    # TODO: replace the invalid characters instead? Would need users to agree.
+    character_check_ok = character_check(aip_bag)
+    if not character_check_ok:
+        log("This AIP has invalid characters. Processing stopped.")
+        continue
+
+    # Updates the bag metadata files.
+    add_bag_metadata(aip_bag)
+
+    # Validates the bag.
+    # Stops processing this AIP if the bag is invalid.
+    try:
+        validate_bag(aip_bag, "Ready to tar")
+    except ValueError:
+        ("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
+
+    # Tars the bag.
+    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
+
+    log("Processing complete.")
