@@ -135,15 +135,25 @@ def add_bag_metadata(aip):
     """Add required fields to bagit-info.txt and add new file aptrust-info.txt"""
 
     # Get metadata from the preservation.xml.
+
+    # Namespaces that find() will use when navigating the xml.
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
+
+    # Parse the data from the XML.
     tree = ET.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
     root = tree.getroot()
-    group = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text[28:]
-    print(group)
+
+    # Get the group id. Value of the first objectIdentifierType is the ARCHive URI.
+    # Start at the 28th character to skip the ARCHive part and just get the group code.
+    uri = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text
+    group = uri[28:]
+
+    # Get the title and collection id.
+    # TODO: not sure how collection id would work if there is more than one relatedObjectIdentifier.
     title = root.find("dc:title", ns).text
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
-    # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
+    # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id).
     # TODO: confirm that only include Bag-Count if there is more than one.
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
@@ -152,14 +162,14 @@ def add_bag_metadata(aip):
     bag.info['Bag-Group-Identifier'] = collection
     bag.save()
 
-    # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?)
+    # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?).
     with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Deep Archive\n")
 
-    # Validate the bag
+    # Validate the bag in case any of the above alterations invalidate it.
     validate_bag(aip)
 
 
