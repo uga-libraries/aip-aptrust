@@ -52,6 +52,7 @@ def size_check(aip):
 def character_check(aip):
     """File and directory names must not contain illegal characters and must be a maximum of 255 characters."""
     # TODO log or fix the error. For now, just working on catching them.
+    # TODO if make changes, undo and redo the bag.
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
@@ -83,7 +84,6 @@ def character_check(aip):
     return True
 
 
-# If anything was changed, undo and redo the bag.
 def undo_bag(bag):
     """Copied from bag repo. Script for undoing a single bag. Untested with this script."""
 
@@ -160,16 +160,8 @@ def add_bag_metadata(aip_id):
         new_file.write("Storage-Option: Deep Archive\n")
 
     # Validate the bag
-    #validate_bag(f"{aip_id}_bag")
+    validate_bag(f"{aip_id}_bag")
 
-
-# PACKAGE THE BAG
-
-# Validate the bag:validate_bag()
-
-# Tar the bag
-# aip = "todo"
-# subprocess.run(f'7z -ttar a "{aip}.tar" "{aips_directory}/{aip}"', stdout=subprocess.DEVNULL, shell=True)
 
 # Get directory from script argument and make that the current directory.
 try:
@@ -183,41 +175,40 @@ except (IndexError, FileNotFoundError):
 # Get each AIP and transform it into an APTrust-compatible AIP.
 for item in os.listdir():
 
-    # # Skip anything that isn't an AIP
-    # # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
-    # if not item.endswith(".tar.bz2"):
-    #     continue
-
-    # This is just for testing
-    if item == "copy of test files":
+    # Skip anything that isn't an AIP
+    # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
+    if not item.endswith(".tar.bz2"):
         continue
 
     print("\nProcessing:", item)
 
-    # # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
-    # # TODO: once see how the script uses this, may decide to leave _bag as part of it.
-    # regex = re.match("^(.*)_bag", item)
-    # aip_id = regex.group(1)
+    # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
+    # TODO: once see how the script uses this, may decide to leave _bag as part of it.
+    regex = re.match("^(.*)_bag", item)
+    aip_id = regex.group(1)
 
-    # This is just for testing.
-    aip_id = item.replace("_bag", "")
+    # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
+    # TODO: handle BMAC that don't have both.
+    unpackage(item, aip_id)
 
-    # # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
-    # # TODO: handle BMAC that don't have both.
-    # unpackage(item, aip_id)
+    # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
+    size_ok = size_check(aip_id)
+    if not size_ok:
+        print("This AIP is above the 5TB limit and must be split")
+        continue
 
-    # # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
-    # size_ok = size_check(aip_id)
-    # if not size_ok:
-    #     print("This AIP is above the 5TB limit and must be split")
-    #     continue
-
-    # # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
-    # # TODO: replace the invalid characters instead? Would need users to agree.
-    # character_check_ok = character_check(aip_id)
-    # if not character_check_ok:
-    #     print("This AIP has invalid characters")
-    #     continue
+    # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
+    # TODO: replace the invalid characters instead? Would need users to agree.
+    character_check_ok = character_check(aip_id)
+    if not character_check_ok:
+        print("This AIP has invalid characters")
+        continue
 
     # Updates the bag metadata files.
     add_bag_metadata(aip_id)
+
+    # Validates the bag.
+    validate_bag(f"{aip_id}_bag")
+
+    # Tars the bag.
+    subprocess.run(f'7z -ttar a "{aip_id}_bag.tar" "{aips_directory}/{aip_id}_bag"', stdout=subprocess.DEVNULL, shell=True)
