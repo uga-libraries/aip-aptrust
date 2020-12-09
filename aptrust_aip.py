@@ -13,6 +13,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 # TODO better error handling than printing to the screen. Log and/or move.
+# TODO: test by tar/zip an invalid bag.
 
 
 def log(log_item):
@@ -87,7 +88,6 @@ def character_check(aip):
                 return False
 
             # No file or directory name can exceed 255 characters, including extension.
-            # TODO: clarify if this means the entire path, like I've calculated, or individual file and directory names.
             path = os.path.join(root, file)
             if len(path) > 255:
                 log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
@@ -175,7 +175,6 @@ def add_bag_metadata(aip):
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
     # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id).
-    # TODO: confirm that only include Bag-Count if there is more than one.
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
@@ -231,7 +230,6 @@ for item in os.listdir():
         continue
 
     # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
-    # TODO: replace the invalid characters instead? Would need users to agree.
     character_check_ok = character_check(aip_bag)
     if not character_check_ok:
         log("This AIP has invalid characters. Processing stopped.")
@@ -245,7 +243,7 @@ for item in os.listdir():
     try:
         validate_bag(aip_bag, "Ready to tar")
     except ValueError:
-        ("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
+        log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
 
     # Tars the bag.
     subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
