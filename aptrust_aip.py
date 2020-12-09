@@ -38,12 +38,11 @@ def unpack(aip_zip, aip):
     os.remove(aip_tar)
 
     # Validates the bag in case there was an undetected problem during storage or unpacking.
-    validate_bag(aip)
+    validate_bag(aip, "Unpacking")
 
 
 def size_check(aip):
     """Bag must be under 5 TB. Returns True or False"""
-    # TODO: want this function to split if it is too large or leave for staff to do?
 
     # Calculate the size, in bytes, of the bag by adding the size of each file in the bag.
     bag_size = 0
@@ -57,34 +56,39 @@ def size_check(aip):
 
 
 def character_check(aip):
-    """File and directory names must not contain illegal characters and must be a maximum of 255 characters."""
-    # TODO log or fix the error. For now, just working on catching them.
+    """File and directory names must not contain impermissible characters and must be a maximum of 255 characters."""
+    # TODO log the character that is the problem or replace with underscore.
+    # TODO it ends as soon as one with an error is encountered. Would we want a list of all of them instead?
     # TODO if make changes, undo and redo the bag.
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
-    # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ascii codes.
+    # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ord with ascii codes.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     for root, directories, files in os.walk(aip):
 
-        # No file or directory name can start with a dash or include any of the not permitted characters.
+        # No file or directory name can start with a dash or include any of the impermissible characters.
         # Directories excludes the AIP folder, so test both root (to get the AIP folder) and directories.
         if root.startswith("-") or any(char in root for char in not_permitted):
+            log(f"{root} includes an impermissible character. Processing stopped.")
             return False
 
         for directory in directories:
             if directory.startswith("-") or any(char in directory for char in not_permitted):
+                log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
                 return False
 
         for file in files:
             if file.startswith("-") or any(char in file for char in not_permitted):
+                log(f"{os.path.join(root, file)} includes an impermissible character. Processing stopped.")
                 return False
 
             # No file or directory name can exceed 255 characters, including extension.
             # TODO: clarify if this means the entire path, like I've calculated, or individual file and directory names.
             path = os.path.join(root, file)
             if len(path) > 255:
+                log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
                 return False
 
     # If no error was encountered, return True
@@ -126,16 +130,16 @@ def make_bag(aip):
     os.replace(aip, new_aip_name)
 
 
-def validate_bag(aip):
-    """Validates the bag. If it is not valid, prints the error."""
+def validate_bag(aip, step):
+    """Validates the bag and logs the result."""
+    # TODO: end processing of the AIP if it does not validate.
 
     new_bag = bagit.Bag(aip)
     try:
         new_bag.validate()
-        print("bag is valid")
+        log(f"{step}: bag is valid.")
     except bagit.BagValidationError as e:
-        print("bag invalid")
-        print(e)
+        log(f"{step}: bag is not valid. {e}")
 
 
 def add_bag_metadata(aip):
@@ -175,9 +179,6 @@ def add_bag_metadata(aip):
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Deep Archive\n")
-
-    # Validate the bag in case any of the above alterations invalidate it.
-    validate_bag(aip)
 
 
 # Get directory from script argument and make that the current directory.
@@ -224,7 +225,7 @@ for item in os.listdir():
     add_bag_metadata(aip_bag)
 
     # Validates the bag.
-    validate_bag(aip_bag)
+    validate_bag(aip_bag, "Ready to tar")
 
     # Tars the bag.
     subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
