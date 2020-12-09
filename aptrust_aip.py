@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 # TODO better error handling than printing to the screen. Log and/or move.
 
 
-def unpackage(aip_zip, id):
+def unpackage(aip_zip, aip):
     """Unpackage the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
     The file size is just part of the aip_zip name, so it is automatically removed by extracting the bag. """
 
@@ -31,7 +31,7 @@ def unpackage(aip_zip, id):
     os.remove(aip_tar)
 
     # Validates the bag in case there was an undetected problem during storage.
-    validate_bag(f"{id}_bag")
+    validate_bag(aip)
 
 
 def size_check(aip):
@@ -40,7 +40,7 @@ def size_check(aip):
 
     # Calculate the size, in bytes, of the bag by adding the size of each file in the bag.
     bag_size = 0
-    for root, dirs, files in os.walk(f"{aip}_bag"):
+    for root, dirs, files in os.walk(aip):
         for file in files:
             file_path = os.path.join(root, file)
             bag_size += os.path.getsize(file_path)
@@ -59,7 +59,7 @@ def character_check(aip):
     # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ascii codes.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
-    for root, directories, files in os.walk(f"{aip}_bag"):
+    for root, directories, files in os.walk(aip):
 
         # No file or directory name can start with a dash or include any of the not permitted characters.
         # Directories excludes the AIP folder, so test both root (to get the AIP folder) and directories.
@@ -84,11 +84,11 @@ def character_check(aip):
     return True
 
 
-def undo_bag(bag):
+def undo_bag(aip):
     """Copied from bag repo. Script for undoing a single bag. Untested with this script."""
 
     # Change to the directory that is being unbagged.
-    os.chdir(bag)
+    os.chdir(aip)
 
     # Delete the bag metadata files, which are all text files.
     for doc in os.listdir('.'):
@@ -103,20 +103,20 @@ def undo_bag(bag):
     os.rmdir('data')
 
     # Delete '_bag' from the end of the directory name if the standard bag naming convention was used.
-    if bag.endswith('_bag'):
-        new_name = bag.replace('_bag', '')
-        os.replace(bag, new_name)
+    if aip.endswith('_bag'):
+        new_name = aip.replace('_bag', '')
+        os.replace(aip, new_name)
 
 
-def make_bag(aip_id):
+def make_bag(aip):
     """Creates a bag and renames to add _bag to the folder."""
 
     # Bags the AIP folder in place. Both md5 and sha256 checksums are generated to guard against tampering.
-    bagit.make_bag(aip_id, checksums=['md5', 'sha256'])
+    bagit.make_bag(aip, checksums=['md5', 'sha256'])
 
     # Renames the AIP folder to add _bag to the end of the folder name.
-    new_aip_name = f'{aip_id}_bag'
-    os.replace(aip_id, new_aip_name)
+    new_aip_name = f'{aip}_bag'
+    os.replace(aip, new_aip_name)
 
 
 def validate_bag(aip):
@@ -131,12 +131,12 @@ def validate_bag(aip):
         print(e)
 
 
-def add_bag_metadata(aip_id):
+def add_bag_metadata(aip):
     """Add required fields to bagit-info.txt and add new file aptrust-info.txt"""
 
     # Get metadata from the preservation.xml.
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
-    tree = ET.parse(f"{aip_id}_bag/data/metadata/{aip_id}_preservation.xml")
+    tree = ET.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
     root = tree.getroot()
     group = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text[28:]
     print(group)
@@ -145,22 +145,22 @@ def add_bag_metadata(aip_id):
 
     # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
     # TODO: confirm that only include Bag-Count if there is more than one.
-    bag = bagit.Bag(f"{aip_id}_bag")
+    bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
-    bag.info['Internal-Sender-Identifier'] = aip_id
+    bag.info['Internal-Sender-Identifier'] = aip.replace("_bag", "")
     bag.info['Bag-Group-Identifier'] = collection
     bag.save()
 
     # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?)
-    with open(f"{aip_id}_bag/aptrust-info.txt", "w") as new_file:
+    with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Deep Archive\n")
 
     # Validate the bag
-    validate_bag(f"{aip_id}_bag")
+    validate_bag(aip)
 
 
 # Get directory from script argument and make that the current directory.
@@ -182,33 +182,32 @@ for item in os.listdir():
 
     print("\nProcessing:", item)
 
-    # Calculates the AIP ID from the .tar.bz2 name for referring to the AIP after it is unpackaged.
-    # TODO: once see how the script uses this, may decide to leave _bag as part of it.
-    regex = re.match("^(.*)_bag", item)
-    aip_id = regex.group(1)
+    # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
+    regex = re.match("^(.*_bag).", item)
+    aip_bag = regex.group(1)
 
     # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
     # TODO: handle BMAC that don't have both.
-    unpackage(item, aip_id)
+    unpackage(item, aip_bag)
 
     # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
-    size_ok = size_check(aip_id)
+    size_ok = size_check(aip_bag)
     if not size_ok:
         print("This AIP is above the 5TB limit and must be split")
         continue
 
     # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
     # TODO: replace the invalid characters instead? Would need users to agree.
-    character_check_ok = character_check(aip_id)
+    character_check_ok = character_check(aip_bag)
     if not character_check_ok:
         print("This AIP has invalid characters")
         continue
 
     # Updates the bag metadata files.
-    add_bag_metadata(aip_id)
+    add_bag_metadata(aip_bag)
 
     # Validates the bag.
-    validate_bag(f"{aip_id}_bag")
+    validate_bag(aip_bag)
 
     # Tars the bag.
-    subprocess.run(f'7z -ttar a "{aip_id}_bag.tar" "{aips_directory}/{aip_id}_bag"', stdout=subprocess.DEVNULL, shell=True)
+    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
