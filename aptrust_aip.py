@@ -14,23 +14,23 @@ import xml.etree.ElementTree as ET
 # TODO better error handling than printing to the screen. Log and/or move.
 
 
-def unpackage(aip_zip, aip):
-    """Unpackage the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
-    The file size is just part of the aip_zip name, so it is automatically removed by extracting the bag. """
+def unpack(aip_zip, aip):
+    """Unpack the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
+    The file size is just part of the zip name, so it is automatically removed by extracting the bag. """
 
-    # Extracts the contents of the zip file, which is a tar file.
-    subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
+    # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
+    # Some AIPs are just tarred and not zipped.
+    if aip_zip.endswith(".bz2"):
+        subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
+        os.remove(aip_zip)
 
-    # Extracts the contents of the tar file, which is the AIP's bag directory.
-    # Calculates the name of the tar file by removing the .bz2 extension to be able to extract.
+    # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
+    # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
     aip_tar = aip_zip.replace(".bz2", "")
     subprocess.run(f"7z x {aip_tar}", stdout=subprocess.DEVNULL, shell=True)
-
-    # Deletes the aip_tar.bz2 and aip.tar files. All that is needed is the AIP's bag directory.
-    os.remove(aip_zip)
     os.remove(aip_tar)
 
-    # Validates the bag in case there was an undetected problem during storage.
+    # Validates the bag in case there was an undetected problem during storage or unpacking.
     validate_bag(aip)
 
 
@@ -186,8 +186,7 @@ except (IndexError, FileNotFoundError):
 for item in os.listdir():
 
     # Skip anything that isn't an AIP
-    # TODO: BMAC can sometimes be just tar or just aip_zip; check the documentation.
-    if not item.endswith(".tar.bz2"):
+    if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
         continue
 
     print("\nProcessing:", item)
@@ -196,9 +195,8 @@ for item in os.listdir():
     regex = re.match("^(.*_bag).", item)
     aip_bag = regex.group(1)
 
-    # Unpackage the tar and aip_zip, and remove the size from the bag directory name.
-    # TODO: handle BMAC that don't have both.
-    unpackage(item, aip_bag)
+    # Unpack the zip (if applicable) and tar file, resulting the bag directory.
+    unpack(item, aip_bag)
 
     # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
     size_ok = size_check(aip_bag)
