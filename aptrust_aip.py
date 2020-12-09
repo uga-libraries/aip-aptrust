@@ -14,6 +14,13 @@ import xml.etree.ElementTree as ET
 # TODO better error handling than printing to the screen. Log and/or move.
 
 
+def log(log_item):
+    """Saves information about an error or event to its own line in a text file."""
+
+    with open("conversion_log.txt", "a") as log_file:
+        log_file.write(f'{log_item}\n')
+
+
 def unpack(aip_zip, aip):
     """Unpack the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
     The file size is just part of the zip name, so it is automatically removed by extracting the bag. """
@@ -183,13 +190,15 @@ except (IndexError, FileNotFoundError):
     exit()
 
 # Get each AIP and transform it into an APTrust-compatible AIP.
+# Results of each step are recorded in a log.
 for item in os.listdir():
+
+    log(f"\nSTARTING PROCESSING ON: {item}")
 
     # Skip anything that isn't an AIP
     if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
+        log("Not an AIP. Does not end with .tar.bz2 or .tar")
         continue
-
-    print("\nProcessing:", item)
 
     # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
     regex = re.match("^(.*_bag).", item)
@@ -201,14 +210,14 @@ for item in os.listdir():
     # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
     size_ok = size_check(aip_bag)
     if not size_ok:
-        print("This AIP is above the 5TB limit and must be split")
+        log("This AIP is above the 5TB limit and must be split. Processing stopped.")
         continue
 
     # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
     # TODO: replace the invalid characters instead? Would need users to agree.
     character_check_ok = character_check(aip_bag)
     if not character_check_ok:
-        print("This AIP has invalid characters")
+        log("This AIP has invalid characters. Processing stopped.")
         continue
 
     # Updates the bag metadata files.
@@ -219,3 +228,5 @@ for item in os.listdir():
 
     # Tars the bag.
     subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
+
+    log("Processing complete.")
