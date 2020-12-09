@@ -138,16 +138,16 @@ def add_bag_metadata(aip_id):
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
     tree = ET.parse(f"{aip_id}_bag/data/metadata/{aip_id}_preservation.xml")
     root = tree.getroot()
+    group = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text[28:]
+    print(group)
     title = root.find("dc:title", ns).text
-
-    # TODO: is there a simpler way to find this without an absolute path from root?
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
     # Add to bagit-info.txt (source, bag count if multiple, internal sender description and identifier, collection id)
     # TODO: confirm that only include Bag-Count if there is more than one.
     bag = bagit.Bag(f"{aip_id}_bag")
     bag.info['Source-Organization'] = "University of Georgia"
-    bag.info['Internal-Sender-Description'] = "SOMETHING TBD. Department? That isn't in the metadata anywhere"
+    bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
     bag.info['Internal-Sender-Identifier'] = aip_id
     bag.info['Bag-Group-Identifier'] = collection
     bag.save()
