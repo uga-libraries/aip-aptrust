@@ -70,20 +70,31 @@ def character_check(aip):
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     for root, directories, files in os.walk(aip):
+        # TODO: replacing starting - with underscore works when added one at a time. Test with multiple levels. Rename as I go may cause problems.
+        # If a file or directory name starts with a dash, replace it with an underscore. If a file or directory name
+        # include an impermissible character or the number of characters exceeds the limit, return False so the
+        # script stops processing this AIP.
 
-        # No file or directory name can start with a dash or include any of the impermissible characters.
-        # Directories excludes the AIP folder, so test both root (to get the AIP folder) and directories.
-        if root.startswith("-") or any(char in root for char in not_permitted):
+        if root.startswith("-"):
+            os.replace(root, "_" + root[1:])
+
+        if any(char in root for char in not_permitted):
             log(f"{root} includes an impermissible character. Processing stopped.")
             return False
 
         for directory in directories:
-            if directory.startswith("-") or any(char in directory for char in not_permitted):
+            if directory.startswith("-"):
+                os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
+
+            if any(char in directory for char in not_permitted):
                 log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
                 return False
 
         for file in files:
-            if file.startswith("-") or any(char in file for char in not_permitted):
+            if file.startswith("-"):
+                os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
+
+            if any(char in file for char in not_permitted):
                 log(f"{os.path.join(root, file)} includes an impermissible character. Processing stopped.")
                 return False
 
@@ -206,28 +217,31 @@ for item in os.listdir():
 
     log(f"\nSTARTING PROCESSING ON: {item}")
 
-    # Skip anything that isn't an AIP
-    if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
-        log("Not an AIP. Does not end with .tar.bz2 or .tar")
+    # # Skip anything that isn't an AIP
+    # if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
+    #     log("Not an AIP. Does not end with .tar.bz2 or .tar")
+    #     continue
+    if not item.endswith("_bag"):
         continue
 
-    # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
-    regex = re.match("^(.*_bag).", item)
-    aip_bag = regex.group(1)
+    # # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpackaged.
+    # regex = re.match("^(.*_bag).", item)
+    # aip_bag = regex.group(1)
+    aip_bag = item
 
-    # Unpack the zip (if applicable) and tar file, resulting in the bag directory.
-    # Stops processing this AIP if the bag is invalid.
-    try:
-        unpack(item, aip_bag)
-    except ValueError:
-        log("The unpacked bag is not valid. Processing stopped.")
-        continue
-
-    # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
-    size_ok = size_check(aip_bag)
-    if not size_ok:
-        log("This AIP is above the 5TB limit and must be split. Processing stopped.")
-        continue
+    # # Unpack the zip (if applicable) and tar file, resulting in the bag directory.
+    # # Stops processing this AIP if the bag is invalid.
+    # try:
+    #     unpack(item, aip_bag)
+    # except ValueError:
+    #     log("The unpacked bag is not valid. Processing stopped.")
+    #     continue
+    #
+    # # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
+    # size_ok = size_check(aip_bag)
+    # if not size_ok:
+    #     log("This AIP is above the 5TB limit and must be split. Processing stopped.")
+    #     continue
 
     # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
     character_check_ok = character_check(aip_bag)
@@ -235,17 +249,17 @@ for item in os.listdir():
         log("This AIP has invalid characters. Processing stopped.")
         continue
 
-    # Updates the bag metadata files.
-    add_bag_metadata(aip_bag)
-
-    # Validates the bag.
-    # Stops processing this AIP if the bag is invalid.
-    try:
-        validate_bag(aip_bag, "Ready to tar")
-    except ValueError:
-        log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
-
-    # Tars the bag.
-    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
+    # # Updates the bag metadata files.
+    # add_bag_metadata(aip_bag)
+    #
+    # # Validates the bag.
+    # # Stops processing this AIP if the bag is invalid.
+    # try:
+    #     validate_bag(aip_bag, "Ready to tar")
+    # except ValueError:
+    #     log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
+    #
+    # # Tars the bag.
+    # subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
 
     log("Processing complete.")
