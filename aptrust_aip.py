@@ -5,6 +5,7 @@
 # it overwrites the original. Is that desired or do we add version number to the AIP ID?
 
 import bagit
+import datetime
 import os
 import re
 import subprocess
@@ -192,6 +193,7 @@ except (IndexError, FileNotFoundError):
 
 # Get each AIP and transform it into an APTrust-compatible AIP.
 # Results of each step are recorded in a log.
+log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs on {datetime.date.today()}.")
 for item in os.listdir():
 
     log(f"\nSTARTING PROCESSING ON: {item}")
