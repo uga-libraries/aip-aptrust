@@ -150,21 +150,25 @@ def character_check(aip):
 
 def length_check(aip):
     """File and directory names must be a maximum of 255 characters."""
-    # TODO: this was tested as part of character_check but not on its own.
-    # TODO: this function isn't called yet.
     # TODO: create a document of all the ones that are too long for staff to edit?
-    # TODO: really hopping the 255 is for individual folders and file names, not for the entire path.
+    # TODO: Currently for entire path. Hoping it is actually individual names - read requirements again or ask Kathryn.
 
     # Iterates through all levels of the AIP directory.
     for root, directories, files in os.walk(aip):
+
         # Iterates through every file at this level of the of AIP directory.
         for file in files:
+
             # Recreates the entire file path.
             path = os.path.join(root, file)
+
             # Evaluates if the path is longer than permitted.
-            if len(path) > 255:
+            if len(path) > 50:
                 log(f"{path} has {len(path)} characters, which exceeds the 255 character limit. Processing stopped.")
                 return False
+
+    # If all files are checked and none returned False, returns True.
+    return True
 
 
 def validate_bag(aip, step):
@@ -258,10 +262,17 @@ for item in os.listdir():
         log("The unpacked bag is not valid. Processing stopped.")
         continue
 
-    # Validate against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
+    # Validates against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB)
     size_ok = size_check(aip_bag)
     if not size_ok:
         log("This AIP is above the 5TB limit and must be split. Processing stopped.")
+        continue
+
+    # Validates against the APTrust character length requirements for directories and files.
+    # Stops processing this AIP if any are too long (over 255 characters).
+    length_ok = length_check(aip_bag)
+    if not length_ok:
+        log("This AIP has at least one file or directory above the 255 character limit. Processing stopped.")
         continue
 
     # Validates against the APTrust character requirements. Replaces impermissible characters with underscores.
