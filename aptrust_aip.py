@@ -5,6 +5,7 @@
 # it overwrites the original. Is that desired or do we add version number to the AIP ID?
 
 import bagit
+import csv
 import datetime
 import os
 import re
@@ -13,7 +14,8 @@ import sys
 import xml.etree.ElementTree as ET
 
 # TODO better error handling than printing to the screen. Log and/or move.
-# TODO: test by tar/zip an invalid bag.
+# TODO: test with errors: tar/zip an invalid bag, impermissible characters, missing/malformed preservation.xml, paths too long
+# TODO: test with other AIPs
 
 
 def log(log_item):
@@ -99,6 +101,7 @@ def character_check(aip):
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
     # Update directory name if it starts with a dash or contains impermissible characters.
+    # TODO: since root eventually includes all the directories, need this? Only issue is finding startswith.
     for root, directories, files in os.walk(aip, topdown=False):
         for directory in directories:
 
@@ -149,26 +152,43 @@ def character_check(aip):
 
 
 def length_check(aip):
-    """File and directory names must be a maximum of 255 characters."""
-    # TODO: create a document of all the ones that are too long for staff to edit?
-    # TODO: Currently for entire path. Hoping it is actually individual names - read requirements again or ask Kathryn.
+    """File and directory names must be a maximum of 255 characters. Creates a document with any names that exceed
+    the limit and returns True/False to indicate if the script should continue processing. """
 
-    # Iterates through all levels of the AIP directory.
+    # Makes a list to store tuples with the path and number of characters for any name exceeding the limit.
+    too_long = []
+
+    # Checks the length of the AIP (top level folder). If it is too long, adds it and its length to the too long
+    # list. Checking the AIP instead of root because everything except the top level folder (AIP) is also included
+    # individually in directories, while root starts including multiple folders as os.walk() navigates the directory.
+    if len(aip) > 255:
+        too_long.append((aip, len(aip)))
+
+    # Checks the length of every directory and file.
+    # If any name is too long, adds its full path and its name length to the too long list.
     for root, directories, files in os.walk(aip):
-
-        # Iterates through every file at this level of the of AIP directory.
+        for directory in directories:
+            if len(directory) > 255:
+                path = os.path.join(root, directory)
+                too_long.append((path, len(directory)))
         for file in files:
+            if len(file) > 255:
+                path = os.path.join(root, file)
+                too_long.append((path, len(file)))
 
-            # Recreates the entire file path.
-            path = os.path.join(root, file)
-
-            # Evaluates if the path is longer than permitted.
-            if len(path) > 50:
-                log(f"{path} has {len(path)} characters, which exceeds the 255 character limit. Processing stopped.")
-                return False
-
-    # If all files are checked and none returned False, returns True.
-    return True
+    # If any names were too long, saves everything that was too long to a file for staff review and returns False so the
+    # script stops processing this AIP. Otherwise, returns True so the next step can start.
+    if len(too_long) > 0:
+        with open("character_limit_exceeded.csv", "a", newline='') as result:
+            writer = csv.writer(result)
+            # Only adds a header if the document is new (empty).
+            if os.path.getsize("character_limit_exceeded.csv") == 0:
+                writer.writerow(["Path", "Length of Name"])
+            for name in too_long:
+                writer.writerow([name[0], name[1]])
+        return False
+    else:
+        return True
 
 
 def validate_bag(aip, step):
