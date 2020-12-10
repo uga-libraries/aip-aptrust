@@ -62,9 +62,9 @@ def size_check(aip):
 def character_check(aip):
     """File and directory names must not start with a dash or contain any of 5 impermissible character. Replaces them
     with underscores. """
-    # TODO log the changes.
+    # TODO log the changes better: make a csv with before/after including full path instead of adding to log.
     # TODO update the bag. Save with manifest? Need to undo/redo?
-    # TODO make a dash function and a character function?
+    # TODO make a replace function? A lot of overlap between file, directory, and root code.
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
@@ -79,7 +79,9 @@ def character_check(aip):
     # Update file name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
         for file in files:
-            new_name = ""
+
+            # Variable with the original name that can be updated as needed.
+            new_name = file
 
             # If file's name starts with a dash, makes a new name that replaces the dash with an underscore.
             # To replace only the first dash, combine underscore with everything except the first character of file's name.
@@ -89,17 +91,19 @@ def character_check(aip):
             # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
                 if character in file:
-                    new_name = file.replace(character, "_")
+                    new_name = new_name.replace(character, "_")
 
-            # If a new name was made, renames file to that new name. Otherwise, leaves file as is.
-            if len(new_name) > 1:
+            # If a new name was made is different from the original name, renames root to that new name.
+            if not file == new_name:
                 log(f"Changed {file} to {new_name}.")
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
     # Update directory name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip, topdown=False):
         for directory in directories:
-            new_name = ""
+
+            # Variable with the original name that can be updated as needed.
+            new_name = directory
 
             # If directory's name starts with a dash, makes a new name that replaces the dash with an underscore.
             # To replace only the first dash, combine underscore with everything except the first character of directory's name.
@@ -109,16 +113,18 @@ def character_check(aip):
             # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
                 if character in directory:
-                    new_name = directory.replace(character, "_")
+                    new_name = new_name.replace(character, "_")
 
-            # If a new name was made, renames directory to that new name. Otherwise, leaves directory as is.
-            if len(new_name) > 1:
+            # If a new name was made is different from the original name, renames root to that new name.
+            if not directory == new_name:
                 log(f"Changed {directory} to {new_name}.")
                 os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
     # Update root name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
-        new_name = ""
+
+        # Variable with the original name that can be updated as needed.
+        new_name = root
 
         # If root's name starts with a dash, makes a new name that replaces the dash with an underscore.
         # To replace only the first dash, combine underscore with everything except the first character of root's name.
@@ -128,10 +134,10 @@ def character_check(aip):
         # If any impermissible characters are present, makes a new name that replaces them with underscores.
         for character in not_permitted:
             if character in root:
-                new_name = root.replace(character, "_")
+                new_name = new_name.replace(character, "_")
 
-        # If a new name was made, renames root to that new name. Otherwise, leaves root as is.
-        if len(new_name) > 1:
+        # If a new name was made is different from the original name, renames root to that new name.
+        if not root == new_name:
             log(f"Changed {root} to {new_name}.")
             os.replace(root, new_name)
 
