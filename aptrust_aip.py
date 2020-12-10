@@ -68,10 +68,11 @@ def character_check(aip):
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
     # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ord with ascii codes.
-    not_permitted = ["\n", "\r", "\t", "\v", "\a"]
+    # TODO added space for testing since I cannot figure out how to replicate any of these characters in a name.
+    not_permitted = ["\n", "\r", "\t", "\v", "\a", " "]
 
-    # Iterates over the directory separately because cannot change root, directory, and files in the same iteration.
-    # Results in only changing root.
+    # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
+    # TODO: there is probably a simpler way to do this.
 
     # If a file starts with a dash or contains an impermissible character, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
@@ -79,8 +80,10 @@ def character_check(aip):
             if file.startswith("-"):
                 os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
 
-            if any(char in file for char in not_permitted):
-                print("todo")
+            for character in not_permitted:
+                if character in file:
+                    new_name = file.replace(character, "_")
+                    os.rename(os.path.join(root, file), os.path.join(root, new_name))
 
     # If a directory starts with a dash or contains an impermissible character, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
@@ -88,15 +91,19 @@ def character_check(aip):
             if directory.startswith("-"):
                 os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
 
-            if any(char in directory for char in not_permitted):
-                print("todo")
+            for character in not_permitted:
+                if character in directory:
+                    new_name = directory.replace(character, "_")
+                    os.rename(os.path.join(root, directory), os.path.join(root, new_name))
 
     # If a root starts with a dash or contains an impermissible character, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
         if root.startswith("-"):
             os.replace(root, "_" + root[1:])
-        if any(char in root for char in not_permitted):
-            print("todo")
+        for character in not_permitted:
+            if character in root:
+                new_name = root.replace(character, "_")
+                os.rename(root, new_name)
 
 
 def length_check(aip):
