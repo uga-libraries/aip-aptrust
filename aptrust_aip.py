@@ -74,9 +74,10 @@ def character_check(aip):
 
     # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
     # POSSIBLE ALTERNATIVE: https://stackoverflow.com/questions/40556685/rename-directorys-recursively-in-python
+    # Seemed like combining dash and characters was working, but dash isn't getting replaced now.
 
     # Update file name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip):
+    for root, directories, files in os.walk(aip, topdown=False):
         for file in files:
             new_name = ""
 
@@ -93,24 +94,27 @@ def character_check(aip):
             # If a new name was made, renames file to that new name. Otherwise, leaves file as is.
             if len(new_name) > 1:
                 log(f"Changed {file} to {new_name}.")
-                os.replace(file, new_name)
+                os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
-    # DIRECTORY WORKS FOR LEVEL 1 (dash and space) BUT NOT LEVEL 2 (until run it again) since its parent folder changed
-    # If a directory starts with a dash, replaces the character with an underscore.
+    # Update directory name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
         for directory in directories:
+            new_name = ""
+
+            # If directory's name starts with a dash, makes a new name that replaces the dash with an underscore.
+            # To replace only the first dash, combine underscore with everything except the first character of directory's name.
             if directory.startswith("-"):
-                #print("Directory has dash", directory)
-                os.replace(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
+                new_name = "_" + directory[1:]
 
-    # If a directory contains an impermissible character, replaces the character with an underscore.
-    for root, directories, files in os.walk(aip):
-        for directory in directories:
+            # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
                 if character in directory:
                     new_name = directory.replace(character, "_")
-                    #print("Change", directory,  "to", new_name)
-                    os.replace(os.path.join(root, directory), os.path.join(root, new_name))
+
+            # If a new name was made, renames directory to that new name. Otherwise, leaves directory as is.
+            if len(new_name) > 1:
+                log(f"Changed {directory} to {new_name}.")
+                os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
     # Update root name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
