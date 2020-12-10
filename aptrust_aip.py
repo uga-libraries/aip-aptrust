@@ -64,6 +64,7 @@ def character_check(aip):
     with underscores. """
     # TODO log the changes.
     # TODO update the bag. Save with manifest? Need to undo/redo?
+    # TODO make a dash function and a character function?
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
@@ -72,38 +73,59 @@ def character_check(aip):
     not_permitted = ["\n", "\r", "\t", "\v", "\a", " "]
 
     # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
-    # TODO: there is probably a simpler way to do this.
+    # POSSIBLE ALTERNATIVE: https://stackoverflow.com/questions/40556685/rename-directorys-recursively-in-python
 
-    # If a file starts with a dash or contains an impermissible character, replaces the character with an underscore.
+    # FILE WORKS: CHANGES DASH AND SPACE AT ALL LEVELS OF HIERARCHY AT ONCE
+    # If a file starts with a dash, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
         for file in files:
             if file.startswith("-"):
-                os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
+                #print("File has dash", file)
+                os.replace(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
 
+    # If a file contains an impermissible character, replaces the character with an underscore.
+    for root, directories, files in os.walk(aip):
+        for file in files:
             for character in not_permitted:
                 if character in file:
                     new_name = file.replace(character, "_")
-                    os.rename(os.path.join(root, file), os.path.join(root, new_name))
+                    #print("Change", file, "to", new_name)
+                    os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
-    # If a directory starts with a dash or contains an impermissible character, replaces the character with an underscore.
+    # DIRECTORY WORKS FOR LEVEL 1 (dash and space) BUT NOT LEVEL 2 (until run it again) since its parent folder changed
+    # If a directory starts with a dash, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
         for directory in directories:
             if directory.startswith("-"):
-                os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
+                #print("Directory has dash", directory)
+                os.replace(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
 
+    # If a directory contains an impermissible character, replaces the character with an underscore.
+    for root, directories, files in os.walk(aip):
+        for directory in directories:
             for character in not_permitted:
                 if character in directory:
                     new_name = directory.replace(character, "_")
-                    os.rename(os.path.join(root, directory), os.path.join(root, new_name))
+                    #print("Change", directory,  "to", new_name)
+                    os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
-    # If a root starts with a dash or contains an impermissible character, replaces the character with an underscore.
+    # ROOT WORKS FOR THE DASH BUT NOT FOR THE SPACE (until run it again) which makes no sense to me
+    # If the root starts with a dash, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
+        print("Starting dash check for", root)
         if root.startswith("-"):
+            print("Root has dash", root)
             os.replace(root, "_" + root[1:])
+
+    # THIS ISN'T RUNNING THE FIRST TIME UNLESS THERE IS NO DASH
+    # If the root contains an impermissible character, replaces the character with an underscore.
+    for root, directories, files in os.walk(aip):
+        print("Starting space check for", root)
         for character in not_permitted:
             if character in root:
                 new_name = root.replace(character, "_")
-                os.rename(root, new_name)
+                print("Change", root, "to", new_name)
+                os.replace(root, new_name)
 
 
 def length_check(aip):
