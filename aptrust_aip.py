@@ -167,41 +167,6 @@ def length_check(aip):
                 return False
 
 
-def undo_bag(aip):
-    """Copied from bag repo. Script for undoing a single bag. Untested with this script."""
-
-    # Change to the directory that is being unbagged.
-    os.chdir(aip)
-
-    # Delete the bag metadata files, which are all text files.
-    for doc in os.listdir('.'):
-        if doc.endswith('.txt'):
-            os.remove(doc)
-
-    # Move the contents from the data folder into the parent directory.
-    for item in os.listdir('data'):
-        os.replace(f'data/{item}', item)
-
-    # Delete the now-empty data folder.
-    os.rmdir('data')
-
-    # Delete '_bag' from the end of the directory name if the standard bag naming convention was used.
-    if aip.endswith('_bag'):
-        new_name = aip.replace('_bag', '')
-        os.replace(aip, new_name)
-
-
-def make_bag(aip):
-    """Creates a bag and renames to add _bag to the folder."""
-
-    # Bags the AIP folder in place. Both md5 and sha256 checksums are generated to guard against tampering.
-    bagit.make_bag(aip, checksums=['md5', 'sha256'])
-
-    # Renames the AIP folder to add _bag to the end of the folder name.
-    new_aip_name = f'{aip}_bag'
-    os.replace(aip, new_aip_name)
-
-
 def validate_bag(aip, step):
     """Validates the bag and logs the result. Record if valid or not for a record of the last time the bag was valid.
     Validation errors do print to the terminal but they are also saved to the log. If the bag is not valid,
