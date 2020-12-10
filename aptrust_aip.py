@@ -109,23 +109,34 @@ def character_check(aip):
                     #print("Change", directory,  "to", new_name)
                     os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
-    # ROOT WORKS FOR THE DASH BUT NOT FOR THE SPACE (until run it again) which makes no sense to me
-    # If the root starts with a dash, replaces the character with an underscore.
+    # Update root name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
-        print("Starting dash check for", root)
-        if root.startswith("-"):
-            print("Root has dash", root)
-            os.replace(root, "_" + root[1:])
+        new_name = ""
 
-    # THIS ISN'T RUNNING THE FIRST TIME UNLESS THERE IS NO DASH
-    # If the root contains an impermissible character, replaces the character with an underscore.
-    for root, directories, files in os.walk(aip):
-        print("Starting space check for", root)
+        # If root's name starts with a dash, makes a new name that replaces the dash with an underscore.
+        # To replace only the first dash, combine underscore with everything except the first character of root's name.
+        if root.startswith("-"):
+            new_name = "_" + root[1:]
+
+        # If any impermissible characters are present, makes a new name that replaces them with underscores.
         for character in not_permitted:
             if character in root:
                 new_name = root.replace(character, "_")
-                print("Change", root, "to", new_name)
-                os.replace(root, new_name)
+
+        # If a new name was made, renames root to that new name. Otherwise, leaves root as is.
+        if len(new_name) > 1:
+            log(f"Changed {root} to {new_name}.")
+            os.replace(root, new_name)
+
+    # # THIS ISN'T RUNNING THE FIRST TIME UNLESS THERE IS NO DASH
+    # # If the root contains an impermissible character, replaces the character with an underscore.
+    # for root, directories, files in os.walk(aip):
+    #     print("Starting space check for", root)
+    #     for character in not_permitted:
+    #         if character in root:
+    #             new_name = root.replace(character, "_")
+    #             print("Change", root, "to", new_name)
+    #             os.replace(root, new_name)
 
 
 def length_check(aip):
@@ -283,11 +294,8 @@ for item in os.listdir():
     #     log("This AIP is above the 5TB limit and must be split. Processing stopped.")
     #     continue
 
-    # Validates against the APTrust character requirements. Stops processing this AIP if any are invalid.
-    character_check_ok = character_check(aip_bag)
-    if not character_check_ok:
-        log("This AIP has invalid characters. Processing stopped.")
-        continue
+    # Validates against the APTrust character requirements. Replaces impermissible characters with underscores.
+    character_check(aip_bag)
 
     # # Updates the bag metadata files.
     # add_bag_metadata(aip_bag)
