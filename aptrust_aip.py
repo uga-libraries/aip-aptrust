@@ -34,14 +34,15 @@ def unpack(aip_zip, aip):
     # Some AIPs are just tarred and not zipped.
     if aip_zip.endswith(".bz2"):
         subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
-        os.remove(aip_zip)
+        #os.remove(aip_zip)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
     # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
     aip_tar = aip_zip.replace(".bz2", "")
-    subprocess.run(f"7z x {aip_tar}", stdout=subprocess.DEVNULL, shell=True)
-    os.remove(aip_tar)
-
+    subprocess.run(f"7z x '{aip_tar}'", stdout=subprocess.DEVNULL, shell=True)
+    #os.remove(aip_tar)
+    print("aip_zip", aip_zip)
+    print("aip_tar", aip_tar)
     # Validates the bag in case there was an undetected problem during storage or unpacking.
     # TODO: does this need to raise the ValueError again if not valid?
     validate_bag(aip, "Unpacking")
@@ -87,12 +88,12 @@ def character_check(aip):
 
             # If file's name starts with a dash, makes a new name that replaces the dash with an underscore.
             # To replace only the first dash, combine underscore with everything except the first character of file's name.
-            if file.startswith("-"):
-                new_name = "_" + file[1:]
+            if new_name.startswith("-"):
+                new_name = "_" + new_name[1:]
 
             # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
-                if character in file:
+                if character in new_name:
                     new_name = new_name.replace(character, "_")
 
             # If a new name was made is different from the original name, renames root to that new name.
@@ -110,12 +111,12 @@ def character_check(aip):
 
             # If directory's name starts with a dash, makes a new name that replaces the dash with an underscore.
             # To replace only the first dash, combine underscore with everything except the first character of directory's name.
-            if directory.startswith("-"):
-                new_name = "_" + directory[1:]
+            if new_name.startswith("-"):
+                new_name = "_" + new_name[1:]
 
             # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
-                if character in directory:
+                if character in new_name:
                     new_name = new_name.replace(character, "_")
 
             # If a new name was made is different from the original name, renames root to that new name.
@@ -123,30 +124,26 @@ def character_check(aip):
                 log(f"Changed {directory} to {new_name}.")
                 os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
-    # Update root name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip):
-
-        # Variable with the original name that can be updated as needed.
-        new_name = root
-
-        # If root's name starts with a dash, makes a new name that replaces the dash with an underscore.
-        # To replace only the first dash, combine underscore with everything except the first character of root's name.
-        if root.startswith("-"):
-            new_name = "_" + root[1:]
-
-        # If any impermissible characters are present, makes a new name that replaces them with underscores.
-        for character in not_permitted:
-            if character in root:
-                new_name = new_name.replace(character, "_")
-
-        # If a new name was made is different from the original name, renames root to that new name.
-        if not root == new_name:
-            log(f"Changed {root} to {new_name}.")
-            os.replace(root, new_name)
+    # TODO: how does the rest of the script know what the name was changed to? Maybe just require AIP to follow rules?
+    # # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
+    # # root because everything except the top level folder (AIP) is also included individually in directories.
+    # new_aip_name = aip
+    #
+    # if new_aip_name.startswith("-"):
+    #     new_aip_name = "_" + aip[1:]
+    #
+    # # If any impermissible characters are present, makes a new name that replaces them with underscores.
+    # for character in not_permitted:
+    #     if character in new_aip_name:
+    #         new_aip_name = new_aip_name.replace(character, "_")
+    #
+    #     # If a new name was made is different from the original name, renames root to that new name.
+    #     if not aip == new_aip_name:
+    #         log(f"Changed {aip} to {new_aip_name}.")
+    #         os.replace(aip, new_aip_name)
 
     # Updates the bag with the new file and directory names.
     # bagit prints to the terminal that each renamed thing is not in the manifest, but resulting bag is valid.
-    # TODO actually need the new name for root, if that changed, instead of aip
     bag = bagit.Bag(aip)
     bag.save(manifests=True)
 
@@ -269,11 +266,11 @@ for item in os.listdir():
         continue
 
     log(f"\nSTARTING PROCESSING ON: {item}")
-
+    print("Starting", item)
     # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpacked.
     regex = re.match("^(.*_bag).", item)
     aip_bag = regex.group(1)
-
+    print("aip_bag", aip_bag)
     # Unpack the zip (if applicable) and tar file, resulting in the bag directory.
     # Stops processing this AIP if the bag is invalid.
     try:
