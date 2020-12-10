@@ -60,11 +60,10 @@ def size_check(aip):
 
 
 def character_check(aip):
-    """File and directory names must not contain impermissible characters and must be a maximum of 255 characters."""
-    # TODO log the character that is the problem or replace with underscore. TODO it ends as soon as one with an
-    #  error is encountered. Would we want a list of all of them instead? If switch to replacing with underscores,
-    #  this would just be the length (make own function?). In that case, could make a csv with all the ones over
-    #  length before exists the function and script. TODO if make changes, undo and redo the bag - or would the save with manifest work????.
+    """File and directory names must not start with a dash or contain any of 5 impermissible character. Replaces them
+    with underscores. """
+    # TODO log the changes.
+    # TODO update the bag. Save with manifest? Need to undo/redo?
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
@@ -74,110 +73,30 @@ def character_check(aip):
     # Iterates over the directory separately because cannot change root, directory, and files in the same iteration.
     # Results in only changing root.
 
-    # If a file starts with a dash or contains an impermissible character, replace the character with an underscore.
+    # If a file starts with a dash or contains an impermissible character, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
         for file in files:
             if file.startswith("-"):
                 os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
 
             if any(char in file for char in not_permitted):
-                log(f"{os.path.join(root, file)} includes an impermissible character. Processing stopped.")
-                return False
+                print("todo")
 
-            # # No file or directory name can exceed 255 characters, including extension.
-            # path = os.path.join(root, file)
-            # if len(path) > 255:
-            #     log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
-            #     return False
-
-        for directory in directories:
-            if directory.startswith("-"):
-                print("Rename", os.path.join(root, directory))
-                os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
-
-            if any(char in directory for char in not_permitted):
-                log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
-                return False
-
-        if root.startswith("-"):
-            print("Rename", root)
-            os.replace(root, "_" + root[1:])
-
-        if any(char in root for char in not_permitted):
-            log(f"{root} includes an impermissible character. Processing stopped.")
-            return False
-
-    # If a file or directory name starts with a dash, replace it with an underscore.
-    # If a file or directory name includes an impermissible character, return False so the script stops processing this AIP.
+    # If a directory starts with a dash or contains an impermissible character, replaces the character with an underscore.
     for root, directories, files in os.walk(aip):
-        for file in files:
-            if file.startswith("-"):
-                print("Rename", os.path.join(root, file))
-                os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
-
-            if any(char in file for char in not_permitted):
-                log(f"{os.path.join(root, file)} includes an impermissible character. Processing stopped.")
-                return False
-
-            # # No file or directory name can exceed 255 characters, including extension.
-            # path = os.path.join(root, file)
-            # if len(path) > 255:
-            #     log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
-            #     return False
-
         for directory in directories:
             if directory.startswith("-"):
-                print("Rename", os.path.join(root, directory))
                 os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
 
             if any(char in directory for char in not_permitted):
-                log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
-                return False
+                print("todo")
 
+    # If a root starts with a dash or contains an impermissible character, replaces the character with an underscore.
+    for root, directories, files in os.walk(aip):
         if root.startswith("-"):
-            print("Rename", root)
             os.replace(root, "_" + root[1:])
-
         if any(char in root for char in not_permitted):
-            log(f"{root} includes an impermissible character. Processing stopped.")
-            return False
-        # If a file or directory name starts with a dash, replace it with an underscore.
-        # If a file or directory name includes an impermissible character, return False so the script stops processing this AIP.
-        for root, directories, files in os.walk(aip):
-            for file in files:
-                if file.startswith("-"):
-                    print("Rename", os.path.join(root, file))
-                    os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
-
-                if any(char in file for char in not_permitted):
-                    log(f"{os.path.join(root, file)} includes an impermissible character. Processing stopped.")
-                    return False
-
-                # # No file or directory name can exceed 255 characters, including extension.
-                # path = os.path.join(root, file)
-                # if len(path) > 255:
-                #     log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
-                #     return False
-
-            for directory in directories:
-                if directory.startswith("-"):
-                    print("Rename", os.path.join(root, directory))
-                    os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
-
-                if any(char in directory for char in not_permitted):
-                    log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
-                    return False
-
-            if root.startswith("-"):
-                print("Rename", root)
-                os.replace(root, "_" + root[1:])
-
-            if any(char in root for char in not_permitted):
-                log(f"{root} includes an impermissible character. Processing stopped.")
-                return False
-
-    # If no error was encountered, return True
-    return True
+            print("todo")
 
 
 def length_check(aip):
