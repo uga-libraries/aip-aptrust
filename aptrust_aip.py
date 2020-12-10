@@ -26,6 +26,7 @@ def log(log_item):
 def unpack(aip_zip, aip):
     """Unpack the AIP. Unzips and untars, leaving the AIP's bag directory, named aip-id_bag.
     The file size is just part of the zip name, so it is automatically removed by extracting the bag. """
+    # todo mac commandline version
 
     # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
     # Some AIPs are just tarred and not zipped.
@@ -60,9 +61,10 @@ def size_check(aip):
 
 def character_check(aip):
     """File and directory names must not contain impermissible characters and must be a maximum of 255 characters."""
-    # TODO log the character that is the problem or replace with underscore.
-    # TODO it ends as soon as one with an error is encountered. Would we want a list of all of them instead?
-    # TODO if make changes, undo and redo the bag.
+    # TODO log the character that is the problem or replace with underscore. TODO it ends as soon as one with an
+    #  error is encountered. Would we want a list of all of them instead? If switch to replacing with underscores,
+    #  this would just be the length (make own function?). In that case, could make a csv with all the ones over
+    #  length before exists the function and script. TODO if make changes, undo and redo the bag - or would the save with manifest work????.
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
@@ -260,6 +262,7 @@ for item in os.listdir():
     #     log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
     #
     # # Tars the bag.
+    # TODO: mac command line tar/zip
     # subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
 
     log("Processing complete.")
