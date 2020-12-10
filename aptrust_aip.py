@@ -71,29 +71,22 @@ def character_check(aip):
     # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ord with ascii codes.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
+    # Iterates over the directory separately because cannot change root, directory, and files in the same iteration.
+    # Results in only changing root.
     for root, directories, files in os.walk(aip):
-        # TODO: replacing starting - with underscore works when added one at a time. Test with multiple levels. Rename as I go may cause problems.
+        # TODO: replacing starting - with underscore works when added one at a time.
+        #  Test with multiple levels. Rename as I go may cause problems.
+        # TODO: log what names are changed? Maybe a separate document?
         # If a file or directory name starts with a dash, replace it with an underscore. If a file or directory name
         # include an impermissible character or the number of characters exceeds the limit, return False so the
         # script stops processing this AIP.
 
-        if root.startswith("-"):
-            os.replace(root, "_" + root[1:])
-
-        if any(char in root for char in not_permitted):
-            log(f"{root} includes an impermissible character. Processing stopped.")
-            return False
-
-        for directory in directories:
-            if directory.startswith("-"):
-                os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
-
-            if any(char in directory for char in not_permitted):
-                log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
-                return False
+        # Renaming: only renaming root. Tried changing order (file, directory, root instead of root, directory, file) and no change.
+        # If remove the rename and just print, it does find them all.
 
         for file in files:
             if file.startswith("-"):
+                print("Rename", os.path.join(root, file))
                 os.rename(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
 
             if any(char in file for char in not_permitted):
@@ -105,6 +98,25 @@ def character_check(aip):
             if len(path) > 255:
                 log(f"{path} is greater than the 255 character limit. It has {len(path)} characters. Processing stopped.")
                 return False
+
+        for directory in directories:
+            if directory.startswith("-"):
+                print("Rename", os.path.join(root, directory))
+                os.rename(os.path.join(root, directory), os.path.join(root, "_" + directory[1:]))
+
+            if any(char in directory for char in not_permitted):
+                log(f"{os.path.join(root, directory)} includes an impermissible character. Processing stopped.")
+                return False
+
+        if root.startswith("-"):
+            print("Rename", root)
+            os.replace(root, "_" + root[1:])
+
+        if any(char in root for char in not_permitted):
+            log(f"{root} includes an impermissible character. Processing stopped.")
+            return False
+
+
 
     # If no error was encountered, return True
     return True
@@ -196,6 +208,7 @@ def add_bag_metadata(aip):
     bag.save()
 
     # Make aptrust-info.txt with title, description, access (institution) and storage option (deep archive?).
+    # TODO: need to save the bag again to get this included in the manifests?
     with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
