@@ -75,22 +75,25 @@ def character_check(aip):
     # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
     # POSSIBLE ALTERNATIVE: https://stackoverflow.com/questions/40556685/rename-directorys-recursively-in-python
 
-    # FILE WORKS: CHANGES DASH AND SPACE AT ALL LEVELS OF HIERARCHY AT ONCE
-    # If a file starts with a dash, replaces the character with an underscore.
+    # Update file name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
         for file in files:
-            if file.startswith("-"):
-                #print("File has dash", file)
-                os.replace(os.path.join(root, file), os.path.join(root, "_" + file[1:]))
+            new_name = ""
 
-    # If a file contains an impermissible character, replaces the character with an underscore.
-    for root, directories, files in os.walk(aip):
-        for file in files:
+            # If file's name starts with a dash, makes a new name that replaces the dash with an underscore.
+            # To replace only the first dash, combine underscore with everything except the first character of file's name.
+            if file.startswith("-"):
+                new_name = "_" + file[1:]
+
+            # If any impermissible characters are present, makes a new name that replaces them with underscores.
             for character in not_permitted:
                 if character in file:
                     new_name = file.replace(character, "_")
-                    #print("Change", file, "to", new_name)
-                    os.replace(os.path.join(root, file), os.path.join(root, new_name))
+
+            # If a new name was made, renames file to that new name. Otherwise, leaves file as is.
+            if len(new_name) > 1:
+                log(f"Changed {file} to {new_name}.")
+                os.replace(file, new_name)
 
     # DIRECTORY WORKS FOR LEVEL 1 (dash and space) BUT NOT LEVEL 2 (until run it again) since its parent folder changed
     # If a directory starts with a dash, replaces the character with an underscore.
@@ -127,16 +130,6 @@ def character_check(aip):
         if len(new_name) > 1:
             log(f"Changed {root} to {new_name}.")
             os.replace(root, new_name)
-
-    # # THIS ISN'T RUNNING THE FIRST TIME UNLESS THERE IS NO DASH
-    # # If the root contains an impermissible character, replaces the character with an underscore.
-    # for root, directories, files in os.walk(aip):
-    #     print("Starting space check for", root)
-    #     for character in not_permitted:
-    #         if character in root:
-    #             new_name = root.replace(character, "_")
-    #             print("Change", root, "to", new_name)
-    #             os.replace(root, new_name)
 
 
 def length_check(aip):
