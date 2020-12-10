@@ -141,6 +141,12 @@ def character_check(aip):
             log(f"Changed {root} to {new_name}.")
             os.replace(root, new_name)
 
+    # Updates the bag with the new file and directory names.
+    # bagit prints to the terminal that each renamed thing is not in the manifest, but resulting bag is valid.
+    # TODO actually need the new name for root, if that changed, instead of aip
+    bag = bagit.Bag(aip)
+    bag.save(manifests=True)
+
 
 def length_check(aip):
     """File and directory names must be a maximum of 255 characters."""
