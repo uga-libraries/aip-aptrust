@@ -77,7 +77,7 @@ def character_check(aip):
     # Seemed like combining dash and characters was working, but dash isn't getting replaced now.
 
     # Update file name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip, topdown=False):
+    for root, directories, files in os.walk(aip):
         for file in files:
             new_name = ""
 
@@ -97,7 +97,7 @@ def character_check(aip):
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
     # Update directory name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip):
+    for root, directories, files in os.walk(aip, topdown=False):
         for directory in directories:
             new_name = ""
 
