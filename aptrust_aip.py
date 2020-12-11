@@ -64,7 +64,6 @@ def character_check(aip):
     """File and directory names must not start with a dash or contain any of 5 impermissible character. Replaces them
     with underscores. """
     # TODO log the changes better: make a csv with before/after including full path instead of adding to log.
-    # TODO update the bag. Save with manifest? Need to undo/redo?
     # TODO make a replace function? A lot of overlap between file, directory, and root code.
 
     # List of special characters that are not permitted.
@@ -74,8 +73,6 @@ def character_check(aip):
     not_permitted = ["\n", "\r", "\t", "\v", "\a", " "]
 
     # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
-    # POSSIBLE ALTERNATIVE: https://stackoverflow.com/questions/40556685/rename-directorys-recursively-in-python
-    # Seemed like combining dash and characters was working, but dash isn't getting replaced now.
 
     # Update file name if it starts with a dash or contains impermissible characters.
     for root, directories, files in os.walk(aip):
@@ -100,7 +97,6 @@ def character_check(aip):
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
     # Update directory name if it starts with a dash or contains impermissible characters.
-    # TODO: since root eventually includes all the directories, need this? Only issue is finding startswith.
     for root, directories, files in os.walk(aip, topdown=False):
         for directory in directories:
 
@@ -122,28 +118,30 @@ def character_check(aip):
                 log(f"Changed {directory} to {new_name}.")
                 os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
-    # TODO: how does the rest of the script know what the name was changed to? Maybe just require AIP to follow rules?
-    # # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
-    # # root because everything except the top level folder (AIP) is also included individually in directories.
-    # new_aip_name = aip
-    #
-    # if new_aip_name.startswith("-"):
-    #     new_aip_name = "_" + aip[1:]
-    #
-    # # If any impermissible characters are present, makes a new name that replaces them with underscores.
-    # for character in not_permitted:
-    #     if character in new_aip_name:
-    #         new_aip_name = new_aip_name.replace(character, "_")
-    #
-    #     # If a new name was made is different from the original name, renames root to that new name.
-    #     if not aip == new_aip_name:
-    #         log(f"Changed {aip} to {new_aip_name}.")
-    #         os.replace(aip, new_aip_name)
+    # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
+    # root because everything except the top level folder (AIP) is also included individually in directories.
+    new_aip_name = aip
+
+    if new_aip_name.startswith("-"):
+        new_aip_name = "_" + aip[1:]
+
+    # If any impermissible characters are present, makes a new name that replaces them with underscores.
+    for character in not_permitted:
+        if character in new_aip_name:
+            new_aip_name = new_aip_name.replace(character, "_")
+
+    # If a new name was made is different from the original name, renames root to that new name.
+    if not aip == new_aip_name:
+        log(f"Changed {aip} to {new_aip_name}.")
+        os.replace(os.path.join(aips_directory, aip), os.path.join(aips_directory, new_aip_name))
 
     # Updates the bag with the new file and directory names.
     # bagit prints to the terminal that each renamed thing is not in the manifest, but resulting bag is valid.
-    bag = bagit.Bag(aip)
+    bag = bagit.Bag(new_aip_name)
     bag.save(manifests=True)
+
+    # Returns the new_aip_name so the rest of the script can refer to the bag.
+    return new_aip_name
 
 
 def length_check(aip):
@@ -295,12 +293,14 @@ for item in os.listdir():
     add_bag_metadata(aip_bag)
 
     # Validates against the APTrust character requirements. Replaces impermissible characters with underscores.
-    character_check(aip_bag)
+    # Returns the new name for the AIP bag in case it was altered by this function so the script can continue acting
+    # on the bag. If UGA naming conventions are followed, it will almost always be the same as aip_bag.
+    new_bag_name = character_check(aip_bag)
 
     # Validates the bag.
     # Stops processing this AIP if the bag is invalid.
     try:
-        validate_bag(aip_bag, "Ready to tar")
+        validate_bag(new_bag_name, "Ready to tar")
     except ValueError:
         log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
 
@@ -308,7 +308,7 @@ for item in os.listdir():
     # TODO: if there is a space, get a command line error: multiple instances for switch. From space in aip_bag.tar, even though in double quotes.
     # From testing in powershell, this will work once aip_bag is updated to replace characters.
     # TODO: mac command line tar/zip
-    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{os.path.join(aips_directory, aip_bag)}"', stdout=subprocess.DEVNULL,
-                   shell=True)
+    subprocess.run(f'7z -ttar a "{new_bag_name}.tar" "{os.path.join(aips_directory, new_bag_name)}"',
+                   stdout=subprocess.DEVNULL, shell=True)
 
     log("Processing complete.")
