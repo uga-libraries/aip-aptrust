@@ -72,10 +72,11 @@ def update_characters(aip):
     # TODO added space for testing since I cannot figure out how to replicate any of these characters in a name.
     not_permitted = ["\n", "\r", "\t", "\v", "\a", " "]
 
-    # Iterates over the directory many times since changing the name of something causes file paths for other things to be incorrect.
+    # Iterates through the directory bottom up so that as directory names are changed it does not impact paths for
+    # directories that have not yet been tested.
+    for root, directories, files in os.walk(aip, topdown=False):
 
-    # Update file name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip):
+        # Update file name if it starts with a dash or contains impermissible characters.
         for file in files:
 
             # Variable with the original name that can be updated as needed.
@@ -96,8 +97,7 @@ def update_characters(aip):
                 log(f"Changed {file} to {new_name}.")
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
-    # Update directory name if it starts with a dash or contains impermissible characters.
-    for root, directories, files in os.walk(aip, topdown=False):
+        # Updates directory name if it starts with a dash or contains impermissible characters.
         for directory in directories:
 
             # Variable with the original name that can be updated as needed.
