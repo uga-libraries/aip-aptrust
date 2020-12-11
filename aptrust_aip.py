@@ -60,7 +60,7 @@ def size_check(aip):
     return bag_size < 5000000000000
 
 
-def character_check(aip):
+def update_characters(aip):
     """File and directory names must not start with a dash or contain any of 5 impermissible character. Replaces them
     with underscores. """
     # TODO log the changes better: make a csv with before/after including full path instead of adding to log.
@@ -295,7 +295,7 @@ for item in os.listdir():
     # Validates against the APTrust character requirements. Replaces impermissible characters with underscores.
     # Returns the new name for the AIP bag in case it was altered by this function so the script can continue acting
     # on the bag. If UGA naming conventions are followed, it will almost always be the same as aip_bag.
-    new_bag_name = character_check(aip_bag)
+    new_bag_name = update_characters(aip_bag)
 
     # Validates the bag.
     # Stops processing this AIP if the bag is invalid.
