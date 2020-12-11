@@ -63,14 +63,15 @@ def size_check(aip):
 def update_characters(aip):
     """File and directory names must not start with a dash or contain any of 5 impermissible character. Replaces them
     with underscores. """
-    # TODO log the changes better: make a csv with before/after including full path instead of adding to log.
     # TODO make a replace function? A lot of overlap between file, directory, and root code.
 
     # List of special characters that are not permitted.
     # No file or directory name can include newline, carriage return, tab, vertical tab, or ascii bells.
     # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ord with ascii codes.
-    # TODO added space for testing since I cannot figure out how to replicate any of these characters in a name.
-    not_permitted = ["\n", "\r", "\t", "\v", "\a", " "]
+    not_permitted = ["\n", "\r", "\t", "\v", "\a"]
+
+    # Makes a list of tuples with the names changes, so that they can be saved to a document later.
+    changed_names = []
 
     # Iterates through the directory bottom up so that as directory names are changed it does not impact paths for
     # directories that have not yet been tested.
@@ -94,7 +95,7 @@ def update_characters(aip):
 
             # If a new name was made is different from the original name, renames root to that new name.
             if not file == new_name:
-                log(f"Changed {file} to {new_name}.")
+                changed_names.append((os.path.join(root, file), os.path.join(root, new_name)))
                 os.replace(os.path.join(root, file), os.path.join(root, new_name))
 
         # Updates directory name if it starts with a dash or contains impermissible characters.
@@ -115,7 +116,7 @@ def update_characters(aip):
 
             # If a new name was made is different from the original name, renames root to that new name.
             if not directory == new_name:
-                log(f"Changed {directory} to {new_name}.")
+                changed_names.append((os.path.join(root, directory), os.path.join(root, new_name)))
                 os.replace(os.path.join(root, directory), os.path.join(root, new_name))
 
     # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
@@ -132,13 +133,25 @@ def update_characters(aip):
 
     # If a new name was made is different from the original name, renames root to that new name.
     if not aip == new_aip_name:
-        log(f"Changed {aip} to {new_aip_name}.")
+        changed_names.append((aip, new_aip_name))
         os.replace(os.path.join(aips_directory, aip), os.path.join(aips_directory, new_aip_name))
 
     # Updates the bag with the new file and directory names.
     # bagit prints to the terminal that each renamed thing is not in the manifest, but resulting bag is valid.
     bag = bagit.Bag(new_aip_name)
     bag.save(manifests=True)
+
+    # If any names were changed, saves them to a file for staff review.
+    # If the AIP name was changed, that will not be in the file and directory paths since AIP name is done after.
+    if len(changed_names) > 0:
+        log("Some files and/or directories were renamed to replace impermissible characters. See renaming.csv.")
+        with open("renaming.csv", "a", newline='') as result:
+            writer = csv.writer(result)
+            # Only adds a header if the document is new (empty).
+            if os.path.getsize("renaming.csv") == 0:
+                writer.writerow(["Original Name", "Updated Name"])
+            for name in changed_names:
+                writer.writerow([name[0], name[1]])
 
     # Returns the new_aip_name so the rest of the script can refer to the bag.
     return new_aip_name
