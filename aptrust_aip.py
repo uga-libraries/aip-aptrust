@@ -264,11 +264,11 @@ for item in os.listdir():
         continue
 
     log(f"\nSTARTING PROCESSING ON: {item}")
-    print("Starting", item)
+
     # Calculates the bag name (aip-id_bag) from the .tar.bz2 name for referring to the AIP after it is unpacked.
     regex = re.match("^(.*_bag).", item)
     aip_bag = regex.group(1)
-    print("aip_bag", aip_bag)
+
     # Unpack the zip (if applicable) and tar file, resulting in the bag directory.
     # Stops processing this AIP if the bag is invalid.
     try:
@@ -290,11 +290,12 @@ for item in os.listdir():
         log("This AIP has at least one file or directory above the 255 character limit. Processing stopped.")
         continue
 
+    # Updates the bag metadata files.
+    # Do this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
+    add_bag_metadata(aip_bag)
+
     # Validates against the APTrust character requirements. Replaces impermissible characters with underscores.
     character_check(aip_bag)
-
-    # Updates the bag metadata files.
-    add_bag_metadata(aip_bag)
 
     # Validates the bag.
     # Stops processing this AIP if the bag is invalid.
