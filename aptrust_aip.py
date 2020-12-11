@@ -305,7 +305,10 @@ for item in os.listdir():
         log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
 
     # Tars the bag.
+    # TODO: if there is a space, get a command line error: multiple instances for switch. From space in aip_bag.tar, even though in double quotes.
+    # From testing in powershell, this will work once aip_bag is updated to replace characters.
     # TODO: mac command line tar/zip
-    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{aips_directory}/{aip_bag}"', stdout=subprocess.DEVNULL, shell=True)
+    subprocess.run(f'7z -ttar a "{aip_bag}.tar" "{os.path.join(aips_directory, aip_bag)}"', stdout=subprocess.DEVNULL,
+                   shell=True)
 
     log("Processing complete.")
