@@ -34,17 +34,15 @@ def unpack(aip_zip, aip):
     # Some AIPs are just tarred and not zipped.
     if aip_zip.endswith(".bz2"):
         subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
-        #os.remove(aip_zip)
+        os.remove(aip_zip)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
     # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
     aip_tar = aip_zip.replace(".bz2", "")
-    subprocess.run(f"7z x '{aip_tar}'", stdout=subprocess.DEVNULL, shell=True)
-    #os.remove(aip_tar)
-    print("aip_zip", aip_zip)
-    print("aip_tar", aip_tar)
+    subprocess.run(f'7z x "{os.path.join(aips_directory, aip_tar)}"', stdout=subprocess.DEVNULL, shell=True)
+    os.remove(aip_tar)
+
     # Validates the bag in case there was an undetected problem during storage or unpacking.
-    # TODO: does this need to raise the ValueError again if not valid?
     validate_bag(aip, "Unpacking")
 
 
