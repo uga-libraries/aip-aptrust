@@ -244,7 +244,7 @@ def add_bag_metadata(aip):
     # Gets the title from the value of the title element.
     title = root.find("dc:title", ns).text
 
-    # Gets the collection id from the value of the relatedObjectIdentifierValue in the aip section.
+    # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
     # todo: not sure how collection id would work if there is more than one relatedObjectIdentifier. Downloading a dlg newspaper with an other relation to test.
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
@@ -276,9 +276,14 @@ except (IndexError, FileNotFoundError):
     print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
     exit()
 
+# Tracks the number of AIPs either fully converted or that encountered errors for including as a summary of the
+# script's success in the log.
+aips_converted = 0
+aips_errors = 0
+
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Errors from any step and the results of bag validation are recorded in a log.
-log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs on {datetime.date.today()}.")
+log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {datetime.datetime.today()}.")
 for item in os.listdir():
 
     # Skip anything that isn't an AIP based on the file extension.
@@ -298,6 +303,7 @@ for item in os.listdir():
     except ValueError:
         log("The unpacked bag is not valid. Processing stopped.")
         move_error("unpacked_bag_not_valid", aip_bag)
+        aips_errors += 1
         continue
 
     # Validates the AIP against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB).
@@ -305,6 +311,7 @@ for item in os.listdir():
     if not size_ok:
         log("This AIP is above the 5TB limit and must be split. Processing stopped.")
         move_error("bag_too_big", aip_bag)
+        aips_errors += 1
         continue
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
@@ -313,6 +320,7 @@ for item in os.listdir():
     if not length_ok:
         log("This AIP has at least one file or directory above the 255 character limit. Processing stopped.")
         move_error("name_too_long", aip_bag)
+        aips_errors += 1
         continue
 
     # Updates the bag metadata files to meet APTrust requirements.
@@ -331,6 +339,7 @@ for item in os.listdir():
     except ValueError:
         log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
         move_error("updated_bag_not_valid", new_bag_name)
+        aips_errors += 1
         exit()
 
     # Tars the bag. Windows uses a different command from Mac/Linux operating systems.
@@ -344,4 +353,9 @@ for item in os.listdir():
     else:
         subprocess.run(f'tar cf {new_bag_name}.tar -C {bag_path}', shell=True)
 
-    log("Processing complete.")
+    log("Processing complete for this AIP.")
+    aips_converted += 1
+
+log(f"\nScript completed at {datetime.datetime.today()}")
+log(f"{aips_converted} AIPs were successfully converted.")
+log(f"{aips_errors} AIPs had errors and could not be converted.")
