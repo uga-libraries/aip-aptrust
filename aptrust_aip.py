@@ -27,6 +27,7 @@ def move_error(error_name, aip):
     """Moves the AIP folder to an error folder, named with the error type, so it is clear what step the AIP stopped on.
     Makes the error folder if it does not already exist prior to moving the AIP folder. """
 
+    print("moving:", aip)
     if not os.path.exists(f'errors/{error_name}'):
         os.makedirs(f'errors/{error_name}')
     os.replace(item, f'errors/{error_name}/{aip}')
@@ -38,16 +39,20 @@ def unpack(aip_zip, aip):
     so it is not part of the extracted bag. """
     # todo test the mac commands - came from ARCHive user manual
 
+    print("Starting unpacking")
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
+    print("os is", operating_system)
 
     # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
     # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
     if aip_zip.endswith(".bz2"):
         if operating_system == "Windows":
+            print("Unzipping with Windows command")
             subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
         else:
             subprocess.run(f"tar xjf {aip_zip}", shell=True)
+        print("Deleting", aip_zip)
         os.remove(aip_zip)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
@@ -56,12 +61,15 @@ def unpack(aip_zip, aip):
     aip_tar = aip_zip.replace(".bz2", "")
     aip_tar_path = os.path.join(aips_directory, aip_tar)
     if operating_system == "Windows":
+        print("Untarring with Windows command")
         subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
         subprocess.run(f'tar xf "{aip_tar_path}"', shell=True)
+    print("Deleting", aip_tar)
     os.remove(aip_tar)
 
     # Validates the bag in case there was an undetected problem during storage or unpacking.
+    print("Validating", aip)
     validate_bag(aip, "Unpacking")
 
 
@@ -206,15 +214,18 @@ def validate_bag(aip, step):
     not valid, raises an error so that the script knows to stop processing this AIP. """
 
     new_bag = bagit.Bag(aip)
+    print("new_bag", new_bag)
 
     # If the bag is valid, logs that the bag is valid, including the workflow step.
     try:
         new_bag.validate()
         log(f"{step}: bag is valid.")
+        print("validated")
 
     # If the bag is not valid, adds each error as its own line to the log. The bagit error output has a block of text
     # with errors divided by semicolons.
     except bagit.BagValidationError as errors:
+        print("errors")
         error_list = str(errors).split("; ")
         for error in error_list:
             log(f"\n{error}")
@@ -233,8 +244,13 @@ def add_bag_metadata(aip):
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
 
     # Parses the data from the preservation.xml.
-    tree = et.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
-    root = tree.getroot()
+    # TODO: is there a more streamlined way to let the function return the error? Needs to return to main body so
+    #  it can add one to aips_errors and stop the loop.
+    try:
+        tree = et.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
+        root = tree.getroot()
+    except FileNotFoundError:
+        raise FileNotFoundError
 
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
@@ -263,7 +279,25 @@ def add_bag_metadata(aip):
         new_file.write("Storage-Option: Deep Archive\n")
 
     # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
+    # If successfully saves, adds note to log to document changes to the bag.
     bag.save(manifests=True)
+    log("bagit-info.txt was successfully updated.")
+    log("aptrust-info.txt was successfully added to the bag.")
+
+
+def tar_bag(aip):
+    """Tars the bag, using the appropriate command for Windows (7zip) or Mac/Linux (tar) operating systems."""
+    # todo: test the mac command. Came from general aip perl script.
+
+    # Gets the operating system, which determines the command for unzipping and untarring.
+    operating_system = platform.system()
+    bag_path = os.path.join(aips_directory, aip)
+
+    # Tars the AIP using the operating system-specific command.
+    if operating_system == "Windows":
+        subprocess.run(f'7z -ttar a "{aip}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
+    else:
+        subprocess.run(f'tar cf {aip}.tar -C "{bag_path}"', shell=True)
 
 
 # Gets the directory from the script argument and makes that the current directory.
@@ -302,13 +336,18 @@ for item in os.listdir():
         move_error("bag_name", item)
         aips_errors += 1
         continue
+    print("aip_bag", aip_bag)
 
-    # Unpack the zip and/or tar file, resulting in the bag directory.
-    # Stops processing this AIP if the bag is invalid.
+    # Unpack the zip and/or tar file, resulting in the bag directory. Stops processing this AIP if the bag is invalid.
+    # TODO: somehow, this is trying to move the .tar.bz2 file to the errors folder, even though verified it
+    #  is the bag name being passed to move_errors. Causes a fatal FileNOtFoundError since that is already deleted.
+    #  Printing every step of the way and everything looks correct.
     try:
         unpack(item, aip_bag)
     except ValueError:
-        log("The unpacked bag is not valid. Processing stopped.")
+        print("bag is not valid")
+        log("\nThe unpacked bag is not valid. Processing stopped.")
+        print("aip_bag to be moved", aip_bag)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
         continue
@@ -332,7 +371,14 @@ for item in os.listdir():
 
     # Updates the bag metadata files to meet APTrust requirements.
     # Do this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
-    add_bag_metadata(aip_bag)
+    # TODO: move_error trying to move the .tar.bz2 file instead of the bag. Did something break with move_error? Did work for one test.
+    try:
+        add_bag_metadata(aip_bag)
+    except FileNotFoundError:
+        log("This AIP does not have a preservation.xml file. Processing stopped.")
+        move_error("no_preservationxml", aip_bag)
+        aips_errors += 1
+        continue
 
     # Checks the AIP for impermissible characters and replaces them with underscores. Produces a list of changed
     # names for the AIP's preservation record. Returns the new name for the AIP bag in case it was altered by this
@@ -349,20 +395,14 @@ for item in os.listdir():
         aips_errors += 1
         exit()
 
-    # Tars the bag. Windows uses a different command from Mac/Linux operating systems.
-    # todo: test the mac command. Came from general aip perl script.
-    # Gets the operating system, which determines the command for unzipping and untarring.
-    operating_system = platform.system()
-    bag_path = os.path.join(aips_directory, new_bag_name)
+    # Tars the bag.
+    tar_bag(new_bag_name)
 
-    if operating_system == "Windows":
-        subprocess.run(f'7z -ttar a "{new_bag_name}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
-    else:
-        subprocess.run(f'tar cf {new_bag_name}.tar -C {bag_path}', shell=True)
-
+    # Logs the completion of processing of the AIP.
     log("Processing complete for this AIP.")
     aips_converted += 1
 
+# Logs the end of the script, including the number of AIPs successfully converted and that had errors.
 log(f"\nScript completed at {datetime.datetime.today()}")
 log(f"{aips_converted} AIPs were successfully converted.")
 log(f"{aips_errors} AIPs had errors and could not be converted.")
