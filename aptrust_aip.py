@@ -80,7 +80,7 @@ def update_characters(aip):
     # TODO make a replace function? A lot of overlap between file, directory, and root code.
 
     # List of special characters that are not permitted: newline, carriage return, tab, vertical tab, or ascii bells.
-    # TODO not sure if they would be interpreted as Python codes by os.walk() or if need to do ord with ascii codes.
+    # This worked for newlines and tabs in a text document. Could not test in names since not permitted by modern OSes.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     # Makes a list of tuples with the names changes, so that they can be saved to a document later.
@@ -259,7 +259,7 @@ def add_bag_metadata(aip):
     title = root.find("dc:title", ns).text
 
     # Gets the collection id from the value of the relatedObjectIdentifierValue in the aip section.
-    # TODO: not sure how collection id would work if there is more than one relatedObjectIdentifier.
+    # todo: not sure how collection id would work if there is more than one relatedObjectIdentifier. Downloading a dlg newspaper with an other relation to test.
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
     # Adds required fields to bagit-info.txt.
@@ -343,7 +343,7 @@ for item in os.listdir():
         log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
 
     # Tars the bag. Windows uses a different command from Mac/Linux operating systems.
-    # TODO: test the mac command. Came from general aip perl script.
+    # todo: test the mac command. Came from general aip perl script.
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
     bag_path = os.path.join(aips_directory, new_bag_name)
