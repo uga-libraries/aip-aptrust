@@ -77,10 +77,40 @@ def size_check(aip):
 def update_characters(aip):
     """Finds impermissible characters in file and directory names and replaces them with underscores. Names must not
     start with a dash or contain any of 5 whitespace characters. """
-    # TODO make a replace function? A lot of overlap between file, directory, and root code.
+
+    def rename(original, join_root=True):
+        """Renames the original file or directory name by replacing any starting dashes or impermissible characters
+        with an underscore. The changes names are recorded in renaming.csv and the new name is returned,
+        although that is only saved and used when the original name supplied is an AIP name. """
+
+        # Variable with the original name that can be updated as needed.
+        new_name = original
+
+        # If the name starts with a dash, makes a new name that replaces the first dash with an underscore by
+        # combining an underscore with everything except the first character of the name.
+        if new_name.startswith("-"):
+            new_name = "_" + new_name[1:]
+
+        # If any impermissible characters are present, makes a new name that replaces them with underscores.
+        for character in not_permitted:
+            if character in new_name:
+                new_name = new_name.replace(character, "_")
+
+        # If a new name was made that is different from the original name, renames to that new name.
+        # The default is to include the root as part of the path, but this is not done for AIP's (AIP = root).
+        if not original == new_name:
+            if join_root:
+                changed_names.append((os.path.join(root, original), os.path.join(root, new_name)))
+                os.replace(os.path.join(root, original), os.path.join(root, new_name))
+            else:
+                changed_names.append((original, new_name))
+                os.replace(original, new_name)
+
+        # This is needed for AIPs only, so the script can continue to refer to the bag.
+        return new_name
 
     # List of special characters that are not permitted: newline, carriage return, tab, vertical tab, or ascii bells.
-    # This worked for newlines and tabs in a text document. Could not test in names since not permitted by modern OSes.
+    # This worked for newlines and tabs in a text document. Could not test in names since not permitted by a modern OS.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     # Makes a list of tuples with the names changes, so that they can be saved to a document later.
@@ -92,64 +122,15 @@ def update_characters(aip):
 
         # Update any file name that starts with a dash or contains impermissible characters.
         for file in files:
-
-            # Variable with the original name that can be updated as needed.
-            new_name = file
-
-            # If a file's name starts with a dash, makes a new name that replaces the first dash with an underscore
-            # by combining an underscore with everything except the first character of the file's name.
-            if new_name.startswith("-"):
-                new_name = "_" + new_name[1:]
-
-            # If any impermissible characters are present, makes a new name that replaces them with underscores.
-            for character in not_permitted:
-                if character in new_name:
-                    new_name = new_name.replace(character, "_")
-
-            # If a new name was made that is different from the original name, renames the file to that new name.
-            if not file == new_name:
-                changed_names.append((os.path.join(root, file), os.path.join(root, new_name)))
-                os.replace(os.path.join(root, file), os.path.join(root, new_name))
+            rename(file)
 
         # Updates any directory name that starts with a dash or contains impermissible characters.
         for directory in directories:
-
-            # Variable with the original name that can be updated as needed.
-            new_name = directory
-
-            # If a directory's name starts with a dash, makes a new name that replaces the first dash with an underscore
-            # by combining an underscore with everything except the first character of the directory's name.
-            if new_name.startswith("-"):
-                new_name = "_" + new_name[1:]
-
-            # If any impermissible characters are present, makes a new name that replaces them with underscores.
-            for character in not_permitted:
-                if character in new_name:
-                    new_name = new_name.replace(character, "_")
-
-            # If a new name was made is different from the original name, renames the directory to that new name.
-            if not directory == new_name:
-                changed_names.append((os.path.join(root, directory), os.path.join(root, new_name)))
-                os.replace(os.path.join(root, directory), os.path.join(root, new_name))
+            rename(directory)
 
     # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
     # root because everything except the top level folder (AIP) was already updated as part of directories.
-    new_aip_name = aip
-
-    # If the AIP's name starts with a dash, makes a new name that replaces the first dash with an underscore by
-    # combining an underscore with everything except the first character of the AIP's name.
-    if new_aip_name.startswith("-"):
-        new_aip_name = "_" + aip[1:]
-
-    # If any impermissible characters are present, makes a new name that replaces them with underscores.
-    for character in not_permitted:
-        if character in new_aip_name:
-            new_aip_name = new_aip_name.replace(character, "_")
-
-    # If a new name was made is different from the original name, renames the AIP to that new name.
-    if not aip == new_aip_name:
-        changed_names.append((aip, new_aip_name))
-        os.replace(os.path.join(aips_directory, aip), os.path.join(aips_directory, new_aip_name))
+    new_aip_name = rename(aip, join_root=False)
 
     # Updates the bag manifests with the new names so it continues to be valid.
     # bagit prints to the terminal that each renamed thing is not in the manifest, but the resulting bag is valid.
