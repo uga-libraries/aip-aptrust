@@ -293,8 +293,15 @@ for item in os.listdir():
     log(f"\nSTARTING PROCESSING ON: {item}")
 
     # Calculates the bag name (aip-id_bag) from the tar or zip name for referring to the AIP after the bag is extracted.
-    regex = re.match("^(.*_bag).", item)
-    aip_bag = regex.group(1)
+    # Stops processing this AIP if the bag name does not match the expected pattern.
+    try:
+        regex = re.match("^(.*_bag).", item)
+        aip_bag = regex.group(1)
+    except AttributeError:
+        log("The bag name is not in the expected format, aip-id_bag. Processing stopped.")
+        move_error("bag_name", item)
+        aips_errors += 1
+        continue
 
     # Unpack the zip and/or tar file, resulting in the bag directory.
     # Stops processing this AIP if the bag is invalid.
