@@ -14,10 +14,6 @@ import subprocess
 import sys
 import xml.etree.ElementTree as et
 
-# TODO errors (and all bag validation results) are logged. Also want to move ones that stop processing?
-# TODO: test with errors: tar/zip invalid bag, characters, missing/malformed preservation.xml, paths too long
-# TODO: test with other AIPs
-
 
 def log(log_item):
     """Saves information about an error or event to its own line in a text file. It is its own function, even though
@@ -25,6 +21,15 @@ def log(log_item):
 
     with open("conversion_log.txt", "a") as log_file:
         log_file.write(f'{log_item}\n')
+
+
+def move_error(error_name, aip):
+    """Moves the AIP folder to an error folder, named with the error type, so it is clear what step the AIP stopped on.
+    Makes the error folder if it does not already exist prior to moving the AIP folder. """
+
+    if not os.path.exists(f'errors/{error_name}'):
+        os.makedirs(f'errors/{error_name}')
+    os.replace(item, f'errors/{error_name}/{aip}')
 
 
 def unpack(aip_zip, aip):
@@ -292,12 +297,14 @@ for item in os.listdir():
         unpack(item, aip_bag)
     except ValueError:
         log("The unpacked bag is not valid. Processing stopped.")
+        move_error("unpacked_bag_not_valid", aip_bag)
         continue
 
     # Validates the AIP against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB).
     size_ok = size_check(aip_bag)
     if not size_ok:
         log("This AIP is above the 5TB limit and must be split. Processing stopped.")
+        move_error("bag_too_big", aip_bag)
         continue
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
@@ -305,6 +312,7 @@ for item in os.listdir():
     length_ok = length_check(aip_bag)
     if not length_ok:
         log("This AIP has at least one file or directory above the 255 character limit. Processing stopped.")
+        move_error("name_too_long", aip_bag)
         continue
 
     # Updates the bag metadata files to meet APTrust requirements.
@@ -322,6 +330,8 @@ for item in os.listdir():
         validate_bag(new_bag_name, "Ready to tar")
     except ValueError:
         log("The bag after the character check and adding bag metadata is not valid. Processing stopped.")
+        move_error("updated_bag_not_valid", new_bag_name)
+        exit()
 
     # Tars the bag. Windows uses a different command from Mac/Linux operating systems.
     # todo: test the mac command. Came from general aip perl script.
