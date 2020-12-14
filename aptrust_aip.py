@@ -268,15 +268,16 @@ def add_bag_metadata(aip):
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
     bag.info['Internal-Sender-Identifier'] = aip.replace("_bag", "")
     bag.info['Bag-Group-Identifier'] = collection
-    bag.save()
 
     # Makes aptrust-info.txt.
-    # TODO: need to save the bag again to get this included in the manifests?
     with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Deep Archive\n")
+
+    # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
+    bag.save(manifests=True)
 
 
 # Gets the directory from the script argument and makes that the current directory.
