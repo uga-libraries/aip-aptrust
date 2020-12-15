@@ -7,6 +7,8 @@ Questions for users:
     * Changes to the log structure or content? More info? Less?
     * Save the name change log to the AIP metadata?
     * Use of description fields?
+    * Ok with replacing those characters with underscores. Unlikely to come up unless someone starts an AIP with dash
+    * Want to delete the bag and just have the tar files or helpful to have unpackaged for review?
 """
 
 import bagit
@@ -81,7 +83,9 @@ def size_check(aip):
             bag_size += os.path.getsize(file_path)
 
     # Evaluate if the size is above the 5 TB limit and return the result.
-    return bag_size < 5000000000000
+    # TODO: put back 5 TB. Using 5 GB for testing
+    # return bag_size < 5000000000000
+    return bag_size < 5000000000
 
 
 def update_characters(aip):
@@ -247,16 +251,27 @@ def add_bag_metadata(aip):
 
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
-    uri = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text
-    group = uri[28:]
+    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    try:
+        uri = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text
+        group = uri[28:]
+    except et.ParseError:
+        raise ValueError
 
     # Gets the title from the value of the title element.
-    title = root.find("dc:title", ns).text
+    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    try:
+        title = root.find("dc:title", ns).text
+    except et.ParseError:
+        raise ValueError
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
-    # todo: not all preservation.xml have a collection in them (see Hargrett web aips)
-    # todo: not sure how collection id would work if there is more than one relatedObjectIdentifier. Downloading a dlg newspaper with an other relation to test.
-    collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
+    # If there is no collection id (e.g. for some web archives), supplies default text.
+    try:
+        collection_id = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
+        collection = collection_id.text
+    except (et.ParseError, AttributeError):
+        collection = "This AIP is not part of a collection."
 
     # Adds required fields to bagit-info.txt.
     bag = bagit.Bag(aip)
@@ -364,6 +379,11 @@ for item in os.listdir():
     except FileNotFoundError:
         log("This AIP does not have a preservation.xml file. Processing stopped.")
         move_error("no_preservationxml", aip_bag)
+        aips_errors += 1
+        continue
+    except ValueError:
+        log("This AIP is missing required title or identifier in the preservation.xml. Processing stopped.")
+        move_error("incomplete_preservationxml", aip_bag)
         aips_errors += 1
         continue
 
