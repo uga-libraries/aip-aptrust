@@ -252,25 +252,30 @@ def add_bag_metadata(aip):
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    # ParseError means the field is not found (object_id_field = None), AttributeError is from doing None.text.
     try:
-        uri = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text
+        object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
+        uri = object_id_field.text
         group = uri[28:]
-    except:
-        raise ValueError
+    except (et.ParseError, AttributeError):
+        raise ValueError("premis:objectIdentifierType")
 
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    # ParseError means the field is not found (title_field = None), AttributeError is from doing None.text.
     try:
-        title = root.find("dc:title", ns).text
-    except:
-        raise ValueError
+        title_field = root.find("dc:title", ns)
+        title = title_field.text
+    except (et.ParseError, AttributeError):
+        raise ValueError("dc:title")
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
     # If there is no collection id (e.g. for some web archives), supplies default text.
+    # ParseError means the field is not found (relationship_id_field = None), AttributeError is from doing None.text.
     try:
-        collection_id = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
-        collection = collection_id.text
-    except AttributeError:
+        relationship_id_field = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
+        collection = relationship_id_field.text
+    except (et.ParseError, AttributeError):
         collection = "This AIP is not part of a collection."
 
     # TODO: for newspaper preservation.xml, first is dlg and second is collection, at least in the example I have.
@@ -388,8 +393,8 @@ for item in os.listdir():
         move_error("no_preservationxml", aip_bag)
         aips_errors += 1
         continue
-    except ValueError:
-        log("This AIP is missing required title or identifier in the preservation.xml. Processing stopped.")
+    except ValueError as error:
+        log(f"This AIP is missing required {error.args[0]} field in the preservation.xml. Processing stopped.")
         move_error("incomplete_preservationxml", aip_bag)
         aips_errors += 1
         continue
