@@ -1,8 +1,13 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Converts AIP from ARCHive into an AIP compatible with Emory.
 
-# To determine: APTrust does not maintain versions. If we submit another AIP with the same ID, just a later version,
-# it overwrites the original. Is that desired or do we add version number to the AIP ID?
+"""
+Questions for users:
+    * APTrust overwrites old AIP with a new version. Is that desired or do we add version number to the AIP ID?
+    * Changes to the log structure or content? More info? Less?
+    * Save the name change log to the AIP metadata?
+    * Use of description fields?
+"""
 
 import bagit
 import csv
@@ -233,8 +238,7 @@ def add_bag_metadata(aip):
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
 
     # Parses the data from the preservation.xml.
-    # TODO: is there a more streamlined way to let the function return the error? Needs to return to main body so
-    #  it can add one to aips_errors and stop the loop.
+    # If the preservation.xml is not found, raises an error so the script can stop processing this AIP.
     try:
         tree = et.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
         root = tree.getroot()
@@ -250,6 +254,7 @@ def add_bag_metadata(aip):
     title = root.find("dc:title", ns).text
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
+    # todo: not all preservation.xml have a collection in them (see Hargrett web aips)
     # todo: not sure how collection id would work if there is more than one relatedObjectIdentifier. Downloading a dlg newspaper with an other relation to test.
     collection = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
@@ -294,7 +299,7 @@ def tar_bag(aip):
 try:
     aips_directory = sys.argv[1]
     os.chdir(aips_directory)
-except (IndexError, FileNotFoundError):
+except (IndexError, FileNotFoundError, NotADirectoryError):
     print("The aips directory is either missing or not a valid directory.")
     print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
     exit()
