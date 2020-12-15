@@ -255,14 +255,14 @@ def add_bag_metadata(aip):
     try:
         uri = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns).text
         group = uri[28:]
-    except et.ParseError:
+    except:
         raise ValueError
 
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
     try:
         title = root.find("dc:title", ns).text
-    except et.ParseError:
+    except:
         raise ValueError
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
@@ -270,8 +270,15 @@ def add_bag_metadata(aip):
     try:
         collection_id = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
         collection = collection_id.text
-    except (et.ParseError, AttributeError):
+    except AttributeError:
         collection = "This AIP is not part of a collection."
+
+    # TODO: for newspaper preservation.xml, first is dlg and second is collection, at least in the example I have.
+    # This fixes that, but very specific. Check with Mary/Donnie about the pattern.
+    if collection == "dlg":
+        collection = root.find(
+            "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue",
+            ns).text
 
     # Adds required fields to bagit-info.txt.
     bag = bagit.Bag(aip)
