@@ -27,10 +27,9 @@ def move_error(error_name, aip):
     """Moves the AIP folder to an error folder, named with the error type, so it is clear what step the AIP stopped on.
     Makes the error folder if it does not already exist prior to moving the AIP folder. """
 
-    print("moving:", aip)
-    if not os.path.exists(f'errors/{error_name}'):
-        os.makedirs(f'errors/{error_name}')
-    os.replace(item, f'errors/{error_name}/{aip}')
+    if not os.path.exists(f"errors/{error_name}"):
+        os.makedirs(f"errors/{error_name}")
+    os.replace(aip, f"errors/{error_name}/{aip}")
 
 
 def unpack(aip_zip, aip):
@@ -39,20 +38,16 @@ def unpack(aip_zip, aip):
     so it is not part of the extracted bag. """
     # todo test the mac commands - came from ARCHive user manual
 
-    print("Starting unpacking")
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
-    print("os is", operating_system)
 
     # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
     # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
     if aip_zip.endswith(".bz2"):
         if operating_system == "Windows":
-            print("Unzipping with Windows command")
             subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
         else:
             subprocess.run(f"tar xjf {aip_zip}", shell=True)
-        print("Deleting", aip_zip)
         os.remove(aip_zip)
 
     # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
@@ -61,15 +56,12 @@ def unpack(aip_zip, aip):
     aip_tar = aip_zip.replace(".bz2", "")
     aip_tar_path = os.path.join(aips_directory, aip_tar)
     if operating_system == "Windows":
-        print("Untarring with Windows command")
         subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
         subprocess.run(f'tar xf "{aip_tar_path}"', shell=True)
-    print("Deleting", aip_tar)
     os.remove(aip_tar)
 
     # Validates the bag in case there was an undetected problem during storage or unpacking.
-    print("Validating", aip)
     validate_bag(aip, "Unpacking")
 
 
@@ -214,18 +206,15 @@ def validate_bag(aip, step):
     not valid, raises an error so that the script knows to stop processing this AIP. """
 
     new_bag = bagit.Bag(aip)
-    print("new_bag", new_bag)
 
     # If the bag is valid, logs that the bag is valid, including the workflow step.
     try:
         new_bag.validate()
         log(f"{step}: bag is valid.")
-        print("validated")
 
     # If the bag is not valid, adds each error as its own line to the log. The bagit error output has a block of text
     # with errors divided by semicolons.
     except bagit.BagValidationError as errors:
-        print("errors")
         error_list = str(errors).split("; ")
         for error in error_list:
             log(f"\n{error}")
@@ -336,18 +325,12 @@ for item in os.listdir():
         move_error("bag_name", item)
         aips_errors += 1
         continue
-    print("aip_bag", aip_bag)
 
     # Unpack the zip and/or tar file, resulting in the bag directory. Stops processing this AIP if the bag is invalid.
-    # TODO: somehow, this is trying to move the .tar.bz2 file to the errors folder, even though verified it
-    #  is the bag name being passed to move_errors. Causes a fatal FileNOtFoundError since that is already deleted.
-    #  Printing every step of the way and everything looks correct.
     try:
         unpack(item, aip_bag)
     except ValueError:
-        print("bag is not valid")
         log("\nThe unpacked bag is not valid. Processing stopped.")
-        print("aip_bag to be moved", aip_bag)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
         continue
@@ -371,7 +354,6 @@ for item in os.listdir():
 
     # Updates the bag metadata files to meet APTrust requirements.
     # Do this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
-    # TODO: move_error trying to move the .tar.bz2 file instead of the bag. Did something break with move_error? Did work for one test.
     try:
         add_bag_metadata(aip_bag)
     except FileNotFoundError:
