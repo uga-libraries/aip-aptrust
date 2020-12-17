@@ -7,9 +7,12 @@ Questions for users:
     * Changes to the log structure or content? More info? Less?
     * Save the name change log to the AIP metadata?
     * Use of description fields?
-    * Ok with replacing those characters with underscores. Unlikely to come up unless someone starts an AIP with dash
-    * Want to delete the bag and just have the tar files or helpful to have unpackaged for review?
+    * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
+    * Want to delete the bag and just have the tar files or helpful to have unpacked for review?
+    * Size check is slow - even 5 GB took some time. Want to be able to turn that off and self-verify?
 """
+
+# todo: the results have not been tested with APTrust ingest
 
 import bagit
 import csv
@@ -83,9 +86,7 @@ def size_check(aip):
             bag_size += os.path.getsize(file_path)
 
     # Evaluate if the size is above the 5 TB limit and return the result.
-    # TODO: put back 5 TB. Using 5 GB for testing
-    # return bag_size < 5000000000000
-    return bag_size < 5000000000
+    return bag_size < 5000000000000
 
 
 def update_characters(aip):
@@ -278,14 +279,14 @@ def add_bag_metadata(aip):
     except (et.ParseError, AttributeError):
         collection = "This AIP is not part of a collection."
 
-    # TODO: for newspaper preservation.xml, first is dlg and second is collection, at least in the example I have.
-    # This fixes that, but very specific. Check with Mary/Donnie about the pattern.
+    # For newspapers, the first relation is dlg and the second is the collection.
     if collection == "dlg":
         collection = root.find(
             "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue",
             ns).text
 
     # Adds required fields to bagit-info.txt.
+    # todo confirm values with staff
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
@@ -293,6 +294,7 @@ def add_bag_metadata(aip):
     bag.info['Bag-Group-Identifier'] = collection
 
     # Makes aptrust-info.txt.
+    # todo: confirm values with staff
     with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
