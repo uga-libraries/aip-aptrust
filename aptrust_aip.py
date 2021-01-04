@@ -1,15 +1,15 @@
 # For pilot collaboration on digital preservation storage with Emory.
-# Converts AIP from ARCHive into an AIP compatible with Emory.
+# Batch converts AIPs from ARCHive into AIPs compatible with APTrust.
 
 """
 Questions for users:
-    * APTrust overwrites old AIP with a new version. Is that desired or do we add version number to the AIP ID?
-    * Changes to the log structure or content? More info? Less?
-    * Save the name change log to the AIP metadata?
-    * Use of description fields?
+    * APTrust overwrites old AIPs with a new version. Is that desired or do we add version number to the AIP ID?
+    * Changes to the log structure (prefer csv?) or content (more or less info)?
+    * Save the name change log to the AIP metadata folder?
+    * Use of description fields in bagit-info.txt and aptrust-info.txt?
     * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
-    * Want to delete the bag and just have the tar files or helpful to have unpacked for review?
-    * Size check is slow - even 5 GB took some time. Want to be able to turn that off and self-verify?
+    * Want to delete the bag and just have the final tar files or helpful to have unpacked for review?
+    * AIP size check is slow - even 5 GB was a noticable lag. Want to be able to turn that off?
 """
 
 # todo: the results have not been tested with APTrust ingest
@@ -43,9 +43,9 @@ def move_error(error_name, aip):
 
 
 def unpack(aip_zip, aip):
-    """Unzips and untars the AIP, using different commands for Windows or Mac, and deletes the zip and tar files. The
-    result is just the AIP's bag directory, named aip-id_bag. The file size is only part of the zip or tar name,
-    so it is not part of the extracted bag. """
+    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac, and deletes the zip
+    and tar files. The result is just the AIP's bag directory, named aip-id_bag. The file size is only part of the
+    zip or tar name, so it is not part of the extracted bag. """
     # todo test the mac commands - came from ARCHive user manual
 
     # Gets the operating system, which determines the command for unzipping and untarring.
@@ -71,7 +71,8 @@ def unpack(aip_zip, aip):
         subprocess.run(f'tar xf "{aip_tar_path}"', shell=True)
     os.remove(aip_tar)
 
-    # Validates the bag in case there was an undetected problem during storage or unpacking.
+    # Validates the bag in case there was a problem during storage or unpacking.
+    # TODO: is it more clear to make this part of the main body of the script instead of being in this function?
     validate_bag(aip, "Unpacking")
 
 
@@ -79,6 +80,7 @@ def size_check(aip):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
     # Calculate the size, in bytes, of the bag by totalling the size of each file in the bag.
+    # TODO: how does this compare to the payload-oxum size in bag-info.txt?
     bag_size = 0
     for root, dirs, files in os.walk(aip):
         for file in files:
@@ -94,25 +96,28 @@ def update_characters(aip):
     start with a dash or contain any of 5 whitespace characters. """
 
     def rename(original, join_root=True):
-        """Renames the original file or directory name by replacing any starting dashes or impermissible characters
-        with an underscore. The changes names are recorded in renaming.csv and the new name is returned,
-        although that is only saved and used when the original name supplied is an AIP name. """
+        """Renames the original file or directory by replacing any starting dashes or impermissible characters with
+        an underscore. If the name is changed, it is added to the changed_names list. The new name, which may be the
+        same as the original, is returned. The new name is only saved and used when the original name supplied is an
+        AIP name so the script can continue to refer to the bag even if the name changes. """
 
         # Variable with the original name that can be updated as needed.
         new_name = original
 
-        # If the name starts with a dash, makes a new name that replaces the first dash with an underscore by
+        # If the name starts with a dash, updates the new name to replace the first dash with an underscore by
         # combining an underscore with everything except the first character of the name.
         if new_name.startswith("-"):
             new_name = "_" + new_name[1:]
 
-        # If any impermissible characters are present, makes a new name that replaces them with underscores.
+        # If any impermissible characters are present in the new name, replaces them with underscores.
         for character in not_permitted:
             if character in new_name:
                 new_name = new_name.replace(character, "_")
 
-        # If a new name was made that is different from the original name, renames to that new name.
-        # The default is to include the root as part of the path, but this is not done for AIP's (AIP = root).
+        # If the new name is different from the original name, renames the file or directory to the new name.
+        # The default is to include the root as part of the path, but this is not done for AIPs (AIP is the root).
+        # Also saves the original and new name to a list of changed names to use for making a record of the change.
+        # TODO: is it safer to return the tuple instead of updating a variable from outside this function?
         if not original == new_name:
             if join_root:
                 changed_names.append((os.path.join(root, original), os.path.join(root, new_name)))
@@ -124,18 +129,18 @@ def update_characters(aip):
         # This is needed for AIPs only, so the script can continue to refer to the bag.
         return new_name
 
-    # List of special characters that are not permitted: newline, carriage return, tab, vertical tab, or ascii bells.
-    # This worked for newlines and tabs in a text document. Could not test in names since not permitted by a modern OS.
+    # List of special characters that are not permitted: newline, carriage return, tab, vertical tab, and ascii bells.
+    # Note: Could not test in file or directory names since none are permitted by a modern OS. Tested within text files.
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
-    # Makes a list of tuples with the names changes, so that they can be saved to a document later.
+    # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
     changed_names = []
 
     # Iterates through the directory, starting from the bottom, so that as directory names are changed it does not
     # impact paths for directories that have not yet been tested.
     for root, directories, files in os.walk(aip, topdown=False):
 
-        # Update any file name that starts with a dash or contains impermissible characters.
+        # Updates any file name that starts with a dash or contains impermissible characters.
         for file in files:
             rename(file)
 
@@ -143,12 +148,12 @@ def update_characters(aip):
         for directory in directories:
             rename(directory)
 
-    # Update the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
-    # root because everything except the top level folder (AIP) was already updated as part of directories.
+    # Updates the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
+    # root because everything in root except the top level folder (AIP) was already updated as part of directories.
     new_aip_name = rename(aip, join_root=False)
 
     # Updates the bag manifests with the new names so it continues to be valid.
-    # bagit prints to the terminal that each renamed thing is not in the manifest, but the resulting bag is valid.
+    # Note: bagit prints to the terminal that each renamed thing is not in the manifest, but the resulting bag is valid.
     bag = bagit.Bag(new_aip_name)
     bag.save(manifests=True)
 
@@ -177,14 +182,14 @@ def length_check(aip):
     # Makes a list to store tuples with the path and number of characters for any name exceeding the limit.
     too_long = []
 
-    # Checks the length of the AIP (top level folder). If it is too long, adds it and its length to the too long
-    # list. Checking the AIP instead of root because everything except the top level folder (AIP) is also included
-    # individually in directories, while root starts including multiple folders as os.walk() navigates the directory.
+    # Checks the length of the AIP (top level folder). If it is too long, adds it and its length to the too_long
+    # list. Checking the AIP instead of root because everything in root except the top level folder (AIP) is also
+    # included individually in directories.
     if len(aip) > 255:
         too_long.append((aip, len(aip)))
 
     # Checks the length of every directory and file.
-    # If any name is too long, adds its full path and its name length to the too long list.
+    # If any name is too long, adds its full path and its name length to the too_long list.
     for root, directories, files in os.walk(aip):
         for directory in directories:
             if len(directory) > 255:
@@ -211,7 +216,7 @@ def length_check(aip):
 
 
 def validate_bag(aip, step):
-    """Validates the bag and logs the result. Logging even if the bag is valid to have a record of the last time the
+    """Validates the bag and logs the result. Logs even if the bag is valid to have a record of the last time the
     bag was valid. Validation errors are both printed to the terminal by bagit and saved to the log. If the bag is
     not valid, raises an error so that the script knows to stop processing this AIP. """
 
@@ -234,8 +239,11 @@ def validate_bag(aip, step):
 
 
 def add_bag_metadata(aip):
-    """Adds required fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata are
-    either consistent for all UGA AIPs or extracted from the preservation.xml file included in the AIP. """
+    """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
+    fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file included in the
+    AIP. """
+    # TODO: since this is called within a try/except, does it need try/except as part of the function? Or will it raise
+    #  the error and stop the function fine on its own?
 
     # Gets metadata from the preservation.xml to use for fields in bagit-info.txt and aptrust-info.txt.
 
@@ -253,7 +261,7 @@ def add_bag_metadata(aip):
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (object_id_field = None), AttributeError is from doing None.text.
+    # ParseError means the field is not found (object_id_field = None), AttributeError is from uri = None.text.
     try:
         object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
         uri = object_id_field.text
@@ -263,7 +271,7 @@ def add_bag_metadata(aip):
 
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (title_field = None), AttributeError is from doing None.text.
+    # ParseError means the field is not found (title_field = None), AttributeError is from tile = None.text.
     try:
         title_field = root.find("dc:title", ns)
         title = title_field.text
@@ -272,18 +280,17 @@ def add_bag_metadata(aip):
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
     # If there is no collection id (e.g. for some web archives), supplies default text.
-    # ParseError means the field is not found (relationship_id_field = None), AttributeError is from doing None.text.
+    # ParseError means the field is not found (relationship_id_field = None), AttributeError is from collection = None.text.
     try:
         relationship_id_field = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
         collection = relationship_id_field.text
     except (et.ParseError, AttributeError):
         collection = "This AIP is not part of a collection."
 
-    # For newspapers, the first relation is dlg and the second is the collection.
+    # For DLG newspapers, the first relationship is dlg and the second is the collection.
+    # Updates the value of collection to be the text of the second relationship instead.
     if collection == "dlg":
-        collection = root.find(
-            "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue",
-            ns).text
+        collection = root.find("aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
 
     # Adds required fields to bagit-info.txt.
     # todo confirm values with staff
@@ -303,6 +310,7 @@ def add_bag_metadata(aip):
 
     # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
     # If successfully saves, adds note to log to document changes to the bag.
+    # TODO: should this be in a try/except or ok with it crashing if bag can't save? Don't know what the error is.
     bag.save(manifests=True)
     log("bagit-info.txt was successfully updated.")
     log("aptrust-info.txt was successfully added to the bag.")
@@ -314,6 +322,7 @@ def tar_bag(aip):
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
+
     bag_path = os.path.join(aips_directory, aip)
 
     # Tars the AIP using the operating system-specific command.
@@ -339,7 +348,8 @@ aips_converted = 0
 aips_errors = 0
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
-# Errors from any step and the results of bag validation are recorded in a log.
+# Anticipated errors from any step and the results of bag validation are recorded in a log.
+# Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
 log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {datetime.datetime.today()}.")
 for item in os.listdir():
 
