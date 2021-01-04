@@ -28,3 +28,16 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 
 6. Validate and tar the bag.
 
+## Explanation of fields added to bagit.info.txt:
+
+* Source-Organization: APTrust subgroup name (University of Georgia)
+* Internal-Sender-Description: ARCHive group, to differentiate between departments
+* Internal-Sender-Identifier: the AIP ID, which is everything from the bag name except the "_bag" suffix
+* Bag-Group-Identifier: the archival collection the AIP is part of or default text indicating it is not part of a collection
+
+## Explanation of fields used in aptrust-info.txt:
+
+* Title: Title of AIP in ARCHive
+* Description: ?????
+* Access: rights information in APTrust (Institution)
+* Storage-Option: storage type to use in APTrust (Deep Archive)
