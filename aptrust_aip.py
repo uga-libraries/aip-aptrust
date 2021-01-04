@@ -1,15 +1,17 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Batch converts AIPs from ARCHive into AIPs compatible with APTrust.
+# Prior to running this script, export the AIPs from ARCHive and save to a folder (aips directory)
+# Script usage: python /path/aptrust_aip.py /path/aips_directory
 
 """
 Questions for users:
-    * APTrust overwrites old AIPs with a new version. Is that desired or do we add version number to the AIP ID?
-    * Changes to the log structure (prefer csv?) or content (more or less info)?
+    * APTrust overwrites old AIPs with a new version. Do we want all versions or just most recent in APTrust?
+    * Changes to the log structure (csv?) or content (more or less info)?
     * Save the name change log to the AIP metadata folder?
-    * Use of description fields in bagit-info.txt and aptrust-info.txt?
+    * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
     * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
     * Want to delete the bag and just have the final tar files or helpful to have unpacked for review?
-    * AIP size check is slow - even 5 GB was a noticable lag. Want to be able to turn that off?
+    * AIP size check is slow - even 5 GB was a noticeable lag. Want to be able to turn that off?
 """
 
 # todo: the results have not been tested with APTrust ingest
