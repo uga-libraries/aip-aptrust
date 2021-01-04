@@ -15,6 +15,7 @@ Questions for users:
 """
 
 # todo: the results have not been tested with APTrust ingest
+# todo: see https://aptrust.github.io/userguide/bagging/ for links to other institutions' scripts for ideas
 
 import bagit
 import csv
@@ -180,6 +181,7 @@ def length_check(aip):
     """Tests if the file and directory name lengths are smaller than the limit of 255 characters. Returns True if all
     names are smaller than the limit or False if any names exceed the limit. Also creates a document with any names
     that exceed the limit for staff review. """
+    # TODO: also requires a minimum length of 1 character: is that necessary to test for? Not sure how 0 is possible.
 
     # Makes a list to store tuples with the path and number of characters for any name exceeding the limit.
     too_long = []
