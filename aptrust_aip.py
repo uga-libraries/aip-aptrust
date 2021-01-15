@@ -49,33 +49,33 @@ def unpack(aip_zip, aip):
     """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac, and deletes the zip
     and tar files. The result is just the AIP's bag directory, named aip-id_bag. The file size is only part of the
     zip or tar name, so it is not part of the extracted bag. """
-    # todo test the mac commands - came from ARCHive user manual
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
 
-    # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
-    # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
-    if aip_zip.endswith(".bz2"):
-        if operating_system == "Windows":
+    # For Windows, use 7-Zip to extract the files. If the AIP is both tarred and zipped, the command is run twice.
+    if operating_system == "Windows":
+
+        # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
+        # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
+        if aip_zip.endswith(".bz2"):
             subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
-        else:
-            subprocess.run(f"tar xjf {aip_zip}", shell=True)
+            os.remove(aip_zip)
+
+        # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
+        # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
+        aip_tar = aip_zip.replace(".bz2", "")
+        aip_tar_path = os.path.join(aips_directory, aip_tar)
+        subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
+        os.remove(aip_tar)
+
+    # For Mac and Linux, use tar to extract the files. One command will extract from both tar and zip at once.
+    else:
+        subprocess.run(f"tar -xf {aip_zip}", shell=True)
         os.remove(aip_zip)
 
-    # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
-    # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
-    # All AIPs will be in a tar file.
-    aip_tar = aip_zip.replace(".bz2", "")
-    aip_tar_path = os.path.join(aips_directory, aip_tar)
-    if operating_system == "Windows":
-        subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
-    else:
-        subprocess.run(f'tar xf "{aip_tar_path}"', shell=True)
-    os.remove(aip_tar)
-
     # Validates the bag in case there was a problem during storage or unpacking.
-    # TODO: is it more clear to make this part of the main body of the script instead of being in this function?
+    # TODO: make this part of the main body of the script. More clear the step is happening.
     validate_bag(aip, "Unpacking")
 
 
@@ -322,7 +322,6 @@ def add_bag_metadata(aip):
 
 def tar_bag(aip):
     """Tars the bag, using the appropriate command for Windows (7zip) or Mac/Linux (tar) operating systems."""
-    # todo: test the mac command. Came from general aip perl script.
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
@@ -333,7 +332,7 @@ def tar_bag(aip):
     if operating_system == "Windows":
         subprocess.run(f'7z -ttar a "{aip}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
-        subprocess.run(f'tar cf {aip}.tar -C "{bag_path}"', shell=True)
+        subprocess.run(f'tar -cf {aip}.tar "{aip}"', shell=True)
 
 
 # Gets the directory from the script argument and makes that the current directory.
