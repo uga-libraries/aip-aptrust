@@ -248,8 +248,6 @@ def add_bag_metadata(aip):
     """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
     fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file included in the
     AIP. """
-    # TODO: since this is called within a try/except, does it need try/except as part of the function? Or will it raise
-    #  the error and stop the function fine on its own?
 
     # Gets metadata from the preservation.xml to use for fields in bagit-info.txt and aptrust-info.txt.
 
@@ -301,7 +299,6 @@ def add_bag_metadata(aip):
         collection = root.find(id, ns).text
 
     # Adds required fields to bagit-info.txt.
-    # todo confirm values with staff
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
@@ -309,7 +306,6 @@ def add_bag_metadata(aip):
     bag.info['Bag-Group-Identifier'] = collection
 
     # Makes aptrust-info.txt.
-    # todo: confirm values with staff
     with open(f"{aip}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
@@ -318,7 +314,6 @@ def add_bag_metadata(aip):
 
     # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
     # If successfully saves, adds note to log to document changes to the bag.
-    # TODO: should this be in a try/except or ok with it crashing if bag can't save? Don't know what the error is.
     bag.save(manifests=True)
     log("bagit-info.txt was successfully updated.")
     log("aptrust-info.txt was successfully added to the bag.")
@@ -444,6 +439,8 @@ for item in os.listdir():
 
     # Tars the bag.
     tar_bag(new_bag_name)
+
+    # TODO: check with the apt_validate.exe. Main question is how to get the filepath.
 
     # Logs the completion of processing of the AIP.
     log("Processing complete for this AIP.")
