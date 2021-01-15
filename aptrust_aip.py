@@ -235,8 +235,8 @@ def validate_bag(aip, step):
     # with errors divided by semicolons.
     except bagit.BagValidationError as errors:
         error_list = str(errors).split("; ")
-        for error in error_list:
-            log(f"\n{error}")
+        for error_line in error_list:
+            log(f"\n{error_line}")
 
         # Error used for the script to stop processing this AIP.
         raise ValueError
@@ -265,7 +265,7 @@ def add_bag_metadata(aip):
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (object_id_field = None), AttributeError is from uri = None.text.
+    # ParseError means the field is not found (find returns None), AttributeError is from uri = None.text.
     try:
         object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
         uri = object_id_field.text
@@ -275,7 +275,7 @@ def add_bag_metadata(aip):
 
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (title_field = None), AttributeError is from tile = None.text.
+    # ParseError means the field is not found (find returns None), AttributeError is from tile = None.text.
     try:
         title_field = root.find("dc:title", ns)
         title = title_field.text
@@ -284,9 +284,10 @@ def add_bag_metadata(aip):
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
     # If there is no collection id (e.g. for some web archives), supplies default text.
-    # ParseError means the field is not found (relationship_id_field = None), AttributeError is from collection = None.text.
+    # ParseError means the field is not found (find returns None), AttributeError is from collection = None.text.
+    id_path = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
     try:
-        relationship_id_field = root.find("aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns)
+        relationship_id_field = root.find(id_path, ns)
         collection = relationship_id_field.text
     except (et.ParseError, AttributeError):
         collection = "This AIP is not part of a collection."
@@ -294,7 +295,8 @@ def add_bag_metadata(aip):
     # For DLG newspapers, the first relationship is dlg and the second is the collection.
     # Updates the value of collection to be the text of the second relationship instead.
     if collection == "dlg":
-        collection = root.find("aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue", ns).text
+        id = "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
+        collection = root.find(id, ns).text
 
     # Adds required fields to bagit-info.txt.
     # todo confirm values with staff
