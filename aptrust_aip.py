@@ -351,7 +351,8 @@ aips_errors = 0
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Anticipated errors from any step and the results of bag validation are recorded in a log.
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
-log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {datetime.datetime.today()}.")
+script_start = datetime.datetime.today()
+log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {script_start}.")
 for item in os.listdir():
 
     # Skip anything that isn't an AIP based on the file extension.
@@ -443,7 +444,9 @@ for item in os.listdir():
     aips_converted += 1
 
 # Logs the end of the script, including the number of AIPs successfully converted and that had errors.
-log(f"\nScript completed at {datetime.datetime.today()}")
+script_end = datetime.datetime.today()
+log(f"\nScript completed at {script_end}")
+log(f"Time to complete: {script_end - script_start}")
 log(f"{aips_converted} AIPs were successfully converted.")
 log(f"{aips_errors} AIPs had errors and could not be converted.")
 
