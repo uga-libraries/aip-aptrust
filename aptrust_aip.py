@@ -1,6 +1,6 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Batch converts AIPs from ARCHive into AIPs compatible with APTrust.
-# Prior to running this script, export the AIPs from ARCHive and save to a folder (aips directory)
+# Prior to running this script, export the AIPs from ARCHive and save to a folder (aips directory).
 # Script usage: python /path/aptrust_aip.py /path/aips_directory
 
 """
@@ -10,7 +10,7 @@ Questions for users:
     * Save the name change log to the AIP metadata folder?
     * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
     * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
-    * Want to delete the bag and just have the final tar files or helpful to have unpacked for review?
+    * Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently not deleted.
 """
 
 # todo: the results have not been tested with APTrust ingest
@@ -45,9 +45,10 @@ def move_error(error_name, aip):
 
 
 def unpack(aip_zip):
-    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac, and deletes the zip
-    and tar files. The result is just the AIP's bag directory, named aip-id_bag. The file size is only part of the
-    zip or tar name, so it is not part of the extracted bag. """
+    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux, and deletes the zip
+    and tar files. The result is the AIP's bag directory, named aip-id_bag. """
+    # TODO: I should not delete the tar/zip files in case there is a script error and they need to run it again.
+    #  Make a subfolder for the outputs so not mixed together?
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
@@ -77,6 +78,7 @@ def unpack(aip_zip):
 def size_check(aip):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
+    # Variable for calculating the total bag size.
     bag_size = 0
 
     # Adds the size of all the bag metadata files.
@@ -84,8 +86,7 @@ def size_check(aip):
         if file.endswith('.txt'):
             bag_size += os.path.getsize(f"{aip}/{file}")
 
-    # Gets the bag payload size (the size of everything in the bag data folder) to the bag size.
-    # This saves time since using os.path.getsize for every file in the data folder gets slow quickly.
+    # Adds the bag payload size (the size of everything in the bag data folder) to the bag size.
     bag_info = open(f"{aip}/bag-info.txt", "r")
     for line in bag_info:
         if line.startswith("Payload-Oxum"):
@@ -122,7 +123,6 @@ def update_characters(aip):
         # If the new name is different from the original name, renames the file or directory to the new name.
         # The default is to include the root as part of the path, but this is not done for AIPs (AIP is the root).
         # Also saves the original and new name to a list of changed names to use for making a record of the change.
-        # TODO: is it safer to return the tuple instead of updating a variable from outside this function?
         if not original == new_name:
             if join_root:
                 changed_names.append((os.path.join(root, original), os.path.join(root, new_name)))
@@ -139,6 +139,7 @@ def update_characters(aip):
     not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
+    # Values are added to this list within rename()
     changed_names = []
 
     # Iterates through the directory, starting from the bottom, so that as directory names are changed it does not
@@ -180,41 +181,40 @@ def update_characters(aip):
 
 
 def length_check(aip):
-    """Tests if the file and directory name lengths are smaller than the limit of 255 characters. Returns True if all
-    names are smaller than the limit or False if any names exceed the limit. Also creates a document with any names
-    that exceed the limit for staff review. """
-    # TODO: also requires a minimum length of 1 character: is that necessary to test for? Not sure how 0 is possible.
+    """Tests if the file and directory name lengths are at least one character long but shorter than the limit of 255
+    characters. Returns True if all names are within the limits or False if any names are outside the limit. Also
+    creates a document with any names that are outside the limit for staff review. """
 
     # Makes a list to store tuples with the path and number of characters for any name exceeding the limit.
-    too_long = []
+    wrong_length = []
 
     # Checks the length of the AIP (top level folder). If it is too long, adds it and its length to the too_long
     # list. Checking the AIP instead of root because everything in root except the top level folder (AIP) is also
     # included individually in directories.
-    if len(aip) > 255:
-        too_long.append((aip, len(aip)))
+    if len(aip) > 255 or len(aip) == 0:
+        wrong_length.append((aip, len(aip)))
 
     # Checks the length of every directory and file.
     # If any name is too long, adds its full path and its name length to the too_long list.
     for root, directories, files in os.walk(aip):
         for directory in directories:
-            if len(directory) > 255:
+            if len(directory) > 255 or len(directory) == 0:
                 path = os.path.join(root, directory)
-                too_long.append((path, len(directory)))
+                wrong_length.append((path, len(directory)))
         for file in files:
-            if len(file) > 255:
+            if len(file) > 255 or len(file) == 0:
                 path = os.path.join(root, file)
-                too_long.append((path, len(file)))
+                wrong_length.append((path, len(file)))
 
     # If any names were too long, saves everything that was too long to a file for staff review and returns False so the
     # script stops processing this AIP. Otherwise, returns True so the next step can start.
-    if len(too_long) > 0:
-        with open("character_limit_exceeded.csv", "a", newline='') as result:
+    if len(wrong_length) > 0:
+        with open("character_limit_error.csv", "a", newline='') as result:
             writer = csv.writer(result)
             # Adds a header if the CSV is empty, meaning this is the first AIP with names exceeding the maximum length.
-            if os.path.getsize("character_limit_exceeded.csv") == 0:
+            if os.path.getsize("character_limit_error.csv") == 0:
                 writer.writerow(["Path", "Length of Name"])
-            for name in too_long:
+            for name in wrong_length:
                 writer.writerow([name[0], name[1]])
         return False
     else:
@@ -407,8 +407,8 @@ for item in os.listdir():
     # If any are too long (over 255 characters), produces a list for staff review and stops processing this AIP.
     length_ok = length_check(aip_bag)
     if not length_ok:
-        log("This AIP has at least one file or directory above the 255 character limit. Processing stopped.")
-        move_error("name_too_long", aip_bag)
+        log("This AIP has at least one file or directory outside the character limit. Processing stopped.")
+        move_error("name_length", aip_bag)
         aips_errors += 1
         continue
 
