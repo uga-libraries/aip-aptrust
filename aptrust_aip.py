@@ -364,6 +364,9 @@ for item in os.listdir():
 
     log(f"\nSTARTING PROCESSING ON: {item}")
 
+    # Print each AIP to the terminal so staff can see script progress.
+    print(f"\nSTARTING PROCESSING ON: {item}")
+
     # Calculates the bag name (aip-id_bag) from the tar or zip name for referring to the AIP after the bag is extracted.
     # Stops processing this AIP if the bag name does not match the expected pattern.
     try:
@@ -442,3 +445,6 @@ for item in os.listdir():
 log(f"\nScript completed at {datetime.datetime.today()}")
 log(f"{aips_converted} AIPs were successfully converted.")
 log(f"{aips_errors} AIPs had errors and could not be converted.")
+
+# Print a summary of success to the terminal so staff get immediate feedback, prior to opening the log.
+print(f"Script is complete. {aips_converted} AIPs were successfully converted. {aips_errors} had errors.")
