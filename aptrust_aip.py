@@ -45,7 +45,7 @@ def move_error(error_name, aip):
     os.replace(aip, f"errors/{error_name}/{aip}")
 
 
-def unpack(aip_zip, aip):
+def unpack(aip_zip):
     """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac, and deletes the zip
     and tar files. The result is just the AIP's bag directory, named aip-id_bag. The file size is only part of the
     zip or tar name, so it is not part of the extracted bag. """
@@ -73,10 +73,6 @@ def unpack(aip_zip, aip):
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
         os.remove(aip_zip)
-
-    # Validates the bag in case there was a problem during storage or unpacking.
-    # TODO: make this part of the main body of the script. More clear the step is happening.
-    validate_bag(aip, "Unpacking")
 
 
 def size_check(aip):
@@ -378,16 +374,21 @@ for item in os.listdir():
         aips_errors += 1
         continue
 
-    # Unpack the zip and/or tar file, resulting in the bag directory. Stops processing this AIP if the bag is invalid.
+    # Unpacks the zip and/or tar file, resulting in the bag directory.
+    unpack(item)
+
+    # Validates the unpacked bag in case there was a problem during storage or unpacking.
+    # Stops processing this AIP if the bag is invalid.
     try:
-        unpack(item, aip_bag)
+        validate_bag(aip_bag, "Unpacking")
     except ValueError:
         log("\nThe unpacked bag is not valid. Processing stopped.")
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
         continue
 
-    # Validates the AIP against the APTrust size requirement. Stops processing this AIP if it is too big (above 5 TB).
+    # Validates the AIP against the APTrust size requirement.
+    # Stops processing this AIP if it is too big (above 5 TB).
     size_ok = size_check(aip_bag)
     if not size_ok:
         log("This AIP is above the 5TB limit and must be split. Processing stopped.")
@@ -447,4 +448,4 @@ log(f"{aips_converted} AIPs were successfully converted.")
 log(f"{aips_errors} AIPs had errors and could not be converted.")
 
 # Print a summary of success to the terminal so staff get immediate feedback, prior to opening the log.
-print(f"Script is complete. {aips_converted} AIPs were successfully converted. {aips_errors} had errors.")
+print(f"\nScript is complete. {aips_converted} AIPs were successfully converted. {aips_errors} had errors.")
