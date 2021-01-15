@@ -11,7 +11,6 @@ Questions for users:
     * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
     * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
     * Want to delete the bag and just have the final tar files or helpful to have unpacked for review?
-    * AIP size check is slow - even 5 GB was a noticeable lag. Want to be able to turn that off?
 """
 
 # todo: the results have not been tested with APTrust ingest
@@ -78,13 +77,20 @@ def unpack(aip_zip):
 def size_check(aip):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
-    # Calculate the size, in bytes, of the bag by totalling the size of each file in the bag.
-    # TODO: how does this compare to the payload-oxum size in bag-info.txt?
     bag_size = 0
-    for root, dirs, files in os.walk(aip):
-        for file in files:
-            file_path = os.path.join(root, file)
-            bag_size += os.path.getsize(file_path)
+
+    # Adds the size of all the bag metadata files.
+    for file in os.listdir(aip):
+        if file.endswith('.txt'):
+            bag_size += os.path.getsize(f"{aip}/{file}")
+
+    # Gets the bag payload size (the size of everything in the bag data folder) to the bag size.
+    # This saves time since using os.path.getsize for every file in the data folder gets slow quickly.
+    bag_info = open(f"{aip}/bag-info.txt", "r")
+    for line in bag_info:
+        if line.startswith("Payload-Oxum"):
+            payload = line.split()[1]
+            bag_size += float(payload)
 
     # Evaluate if the size is above the 5 TB limit and return the result.
     return bag_size < 5000000000000
