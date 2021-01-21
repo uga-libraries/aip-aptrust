@@ -6,7 +6,7 @@
 """
 Questions for users:
     * APTrust overwrites old AIPs with a new version. Do we want all versions or just most recent in APTrust?
-    * Changes to the log structure (csv?) or content (more or less info)?
+    * Changes to the log structure (csv?) or content (more or less info) or name (date?)?
     * Save the name change log to the AIP metadata folder?
     * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
     * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
@@ -93,7 +93,7 @@ def size_check(aip):
             payload = line.split()[1]
             bag_size += float(payload)
 
-    # Evaluate if the size is above the 5 TB limit and return the result.
+    # Evaluate if the size is below the 5 TB limit and return the result (True or False).
     return bag_size < 5000000000000
 
 
@@ -233,8 +233,8 @@ def validate_bag(aip, step):
         new_bag.validate()
         log(f"{step}: bag is valid.")
 
-    # If the bag is not valid, adds each error as its own line to the log. The bagit error output has a block of text
-    # with errors divided by semicolons.
+    # If the bag is not valid, adds each error as its own line to the log.
+    # The bagit error output has a block of text with errors divided by semicolons.
     except bagit.BagValidationError as errors:
         error_list = str(errors).split("; ")
         for error_line in error_list:
