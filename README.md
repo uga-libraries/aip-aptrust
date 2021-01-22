@@ -1,6 +1,6 @@
 # Purpose
 
-Convert AIPs from the UGA Libraries' digital preservation storage (ARCHive) to AIPs that can be ingested into APTrust to have geographically-distant storage. To be valid for APTrust, the AIPs are checked for a if they meet APTrust requirements for maximum size and file name length, additional bag metadata is added, and impermissible characters are replaced with underscores. The result of this script is tar files ready to ingest into APTrust.
+Convert AIPs from the UGA Libraries' digital preservation storage (ARCHive) to AIPs that can be ingested into APTrust to have geographically-distant storage. To be valid for APTrust, the AIPs are checked for if they meet APTrust requirements for maximum size and file name length, additional bag metadata is added, and impermissible characters are replaced with underscores. The result of this script is tar files ready to ingest into APTrust.
 
 ## Status
 
@@ -10,21 +10,21 @@ Convert AIPs from the UGA Libraries' digital preservation storage (ARCHive) to A
 
 ## Workflow
 
-This is a batch workflow, which undertakes the following steps on each AIP in a folder. If an anticipated error is encountered, it is added to the script log and the bag is moved to a folder named with the error to avoid further processing.
+This is a batch workflow, which undertakes the following steps on each AIP in a folder. If an anticipated error is encountered, it is added to the script log, and the bag is moved to a folder named with the error to avoid further processing.
 
-1. Unzip and untar the AIP, resulting in a bag.
+1. Unzips and untars the AIP, resulting in a bag. Validate the bag.
 
-2. Validate the bag against APTrust requirements. Stops processing if the limits are exceeded.
+2. Validates the bag against APTrust requirements. Stops processing if the limits are exceeded.
    * The entire bag must be under 5 TB.
-   * No file or directory name can exceed 255 characters, including extension.
+   * No file or directory name can be 0 characters or exceed 255 characters, including extension.
    
-3. Add fields to the bagit-info.txt file using default values or information from the preservation.xml file in the AIP.
+3. Adds fields to the bagit-info.txt file using default values or information from the preservation.xml file in the AIP.
 
-4. Add an additional metadata file, aptrust-info.txt, to the bag. the metadata file uses default values or information from the preservation.xml file in the AIP.
+4. Adds a metadata file, aptrust-info.txt, to the bag. The metadata file uses default values or information from the preservation.xml file in the AIP.
 
 5. Replaces invalid characters in file and directory names (cannot start with a dash or include five whitespace characters) with underscores and creates a log of name changes. This is done after updating the bag metadata so that the path to the preservation.xml file is not changed.
 
-6. Validate and tar the bag.
+6. Validates and tars the bag.
 
 ## Explanation of fields added to bagit.info.txt:
 
@@ -47,4 +47,4 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 * Save the name change log to the AIP metadata folder?
 * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
 * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
-* Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently not deleted.
+* Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently, the bag is not deleted.
