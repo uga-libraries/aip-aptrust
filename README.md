@@ -39,3 +39,12 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 * Description: ?????
 * Access: rights information in APTrust (Institution)
 * Storage-Option: storage type to use in APTrust (Deep Archive)
+
+## Workflow decisions to be made by staff
+
+* APTrust overwrites old AIPs with a new version. Do we want all versions or just most recent in APTrust?
+* Changes to the log structure (csv?) or content (more or less info) or name (date?)?
+* Save the name change log to the AIP metadata folder?
+* Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
+* Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
+* Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently not deleted.
