@@ -45,10 +45,8 @@ def move_error(error_name, aip):
 
 
 def unpack(aip_zip):
-    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux, and deletes the zip
-    and tar files. The result is the AIP's bag directory, named aip-id_bag. """
-    # TODO: I should not delete the tar/zip files in case there is a script error and they need to run it again.
-    #  Make a subfolder for the outputs so not mixed together?
+    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux. The result is
+    the AIP's bag directory, named aip-id_bag. """
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
@@ -56,23 +54,20 @@ def unpack(aip_zip):
     # For Windows, use 7-Zip to extract the files. If the AIP is both tarred and zipped, the command is run twice.
     if operating_system == "Windows":
 
-        # Extracts the contents of the zip file, which is a tar file, and deletes the zip.
+        # Extracts the contents of the zip file, which is a tar file.
         # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
         if aip_zip.endswith(".bz2"):
             subprocess.run(f"7z x {aip_zip}", stdout=subprocess.DEVNULL, shell=True)
-            os.remove(aip_zip)
 
-        # Extracts the contents of the tar file, which is the AIP's bag directory, and deletes the tar file.
+        # Extracts the contents of the tar file, which is the AIP's bag directory.
         # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
         aip_tar = aip_zip.replace(".bz2", "")
         aip_tar_path = os.path.join(aips_directory, aip_tar)
         subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
-        os.remove(aip_tar)
 
     # For Mac and Linux, use tar to extract the files. One command will extract from both tar and zip at once.
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
-        os.remove(aip_zip)
 
 
 def size_check(aip):
@@ -329,9 +324,9 @@ def tar_bag(aip):
 
     # Tars the AIP using the operating system-specific command.
     if operating_system == "Windows":
-        subprocess.run(f'7z -ttar a "{aip}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
+        subprocess.run(f'7z -ttar a "aptrust-aips/{aip}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
-        subprocess.run(f'tar -cf {aip}.tar "{aip}"', shell=True)
+        subprocess.run(f'tar -cf aptrust-aips/{aip}.tar "{aip}"', shell=True)
 
 
 # Gets the directory from the script argument and makes that the current directory.
@@ -363,7 +358,7 @@ for item in os.listdir():
     log(f"\nSTARTING PROCESSING ON: {item}")
 
     # Print each AIP to the terminal so staff can see script progress.
-    print(f"\nSTARTING PROCESSING ON: {item}")
+    print("STARTING PROCESSING ON:", item)
 
     # Calculates the bag name (aip-id_bag) from the tar or zip name for referring to the AIP after the bag is extracted.
     # Stops processing this AIP if the bag name does not match the expected pattern.
@@ -437,7 +432,7 @@ for item in os.listdir():
         aips_errors += 1
         exit()
 
-    # Tars the bag.
+    # Tars the bag. The tar file is saved to a folder named "aptrust-aips" with the AIPs directory.
     tar_bag(new_bag_name)
 
     # TODO: check with the apt_validate.exe. Main question is how to get the filepath.
