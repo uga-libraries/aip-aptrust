@@ -1,20 +1,8 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Batch converts AIPs from ARCHive into AIPs compatible with APTrust.
 # Prior to running this script, export the AIPs from ARCHive and save to a folder (aips directory).
+
 # Script usage: python /path/aptrust_aip.py /path/aips_directory
-
-"""
-Questions for users:
-    * APTrust overwrites old AIPs with a new version. Do we want all versions or just most recent in APTrust?
-    * Changes to the log structure (csv?) or content (more or less info) or name (date?)?
-    * Save the name change log to the AIP metadata folder?
-    * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
-    * Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
-    * Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently not deleted.
-"""
-
-# todo: the results have not been tested with APTrust ingest
-# todo: see https://aptrust.github.io/userguide/bagging/ for links to other institutions' scripts for ideas
 
 import bagit
 import csv
@@ -351,13 +339,11 @@ script_start = datetime.datetime.today()
 log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {script_start}.")
 for item in os.listdir():
 
-    # Skip anything that isn't an AIP based on the file extension.
+    # Skip anything in the AIPs directory that isn't an AIP based on the file extension.
     if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
         continue
 
     log(f"\nSTARTING PROCESSING ON: {item}")
-
-    # Print each AIP to the terminal so staff can see script progress.
     print("STARTING PROCESSING ON:", item)
 
     # Calculates the bag name (aip-id_bag) from the tar or zip name for referring to the AIP after the bag is extracted.
@@ -371,7 +357,8 @@ for item in os.listdir():
         aips_errors += 1
         continue
 
-    # Unpacks the zip and/or tar file, resulting in the bag directory.
+    # Unpacks the bag directory from the zip and/or tar file.
+    # The original zip and/or tar file is retained in case the script has errors and needs to be run again.
     unpack(item)
 
     # Validates the unpacked bag in case there was a problem during storage or unpacking.
@@ -394,7 +381,7 @@ for item in os.listdir():
         continue
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
-    # If any are too long (over 255 characters), produces a list for staff review and stops processing this AIP.
+    # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
     length_ok = length_check(aip_bag)
     if not length_ok:
         log("This AIP has at least one file or directory outside the character limit. Processing stopped.")
@@ -403,7 +390,7 @@ for item in os.listdir():
         continue
 
     # Updates the bag metadata files to meet APTrust requirements.
-    # Do this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
+    # Does this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
     try:
         add_bag_metadata(aip_bag)
     except FileNotFoundError:
@@ -417,13 +404,14 @@ for item in os.listdir():
         aips_errors += 1
         continue
 
-    # Checks the AIP for impermissible characters and replaces them with underscores. Produces a list of changed
-    # names for the AIP's preservation record. Returns the new name for the AIP bag in case it was altered by this
-    # function so the script can continue acting on the bag. If UGA naming conventions are followed, it will almost
-    # always be the same as aip_bag.
+    # Checks the AIP for impermissible characters and replaces them with underscores.
+    # Produces a list of changed names for the AIP's preservation record.
+    # Saves the new name for the AIP bag in case it was altered by this function so the script can continue acting on
+    # the bag. If UGA naming conventions are followed, it will almost always be the same as aip_bag.
     new_bag_name = update_characters(aip_bag)
 
-    # Validates the bag. Stops processing this AIP if the bag is invalid.
+    # Validates the bag in case there was a problem converting it to an APTrust AIP.
+    # Stops processing this AIP if the bag is invalid.
     try:
         validate_bag(new_bag_name, "Ready to tar")
     except ValueError:
@@ -432,21 +420,18 @@ for item in os.listdir():
         aips_errors += 1
         exit()
 
-    # Tars the bag. The tar file is saved to a folder named "aptrust-aips" with the AIPs directory.
+    # Tars the bag. The tar file is saved to a folder named "aptrust-aips" within the AIPs directory.
     tar_bag(new_bag_name)
 
-    # TODO: check with the apt_validate.exe. Main question is how to get the filepath.
-
-    # Logs the completion of processing of the AIP.
     log("Processing complete for this AIP.")
     aips_converted += 1
 
-# Logs the end of the script, including the number of AIPs successfully converted and that had errors.
+# Logs the end of the script, including summary information about script's success.
 script_end = datetime.datetime.today()
 log(f"\nScript completed at {script_end}")
 log(f"Time to complete: {script_end - script_start}")
 log(f"{aips_converted} AIPs were successfully converted.")
 log(f"{aips_errors} AIPs had errors and could not be converted.")
 
-# Print a summary of success to the terminal so staff get immediate feedback, prior to opening the log.
+# Prints a summary of success to the terminal so staff get immediate feedback, prior to opening the log.
 print(f"\nScript is complete. {aips_converted} AIPs were successfully converted. {aips_errors} had errors.")
