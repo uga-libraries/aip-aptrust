@@ -38,7 +38,7 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 * Title: Title of AIP in ARCHive
 * Description: ?????
 * Access: rights information in APTrust (Institution)
-* Storage-Option: storage type to use in APTrust (Deep Archive)
+* Storage-Option: storage type to use in APTrust (Glacier-Deep-OR)
 
 ## Workflow decisions to be made by staff
 
