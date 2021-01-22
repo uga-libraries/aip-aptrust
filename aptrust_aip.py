@@ -310,7 +310,7 @@ def add_bag_metadata(aip):
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
-        new_file.write("Storage-Option: Deep Archive\n")
+        new_file.write("Storage-Option: Glacier-Deep-OR\n")
 
     # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
     # If successfully saves, adds note to log to document changes to the bag.
