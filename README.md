@@ -4,11 +4,9 @@ Convert AIPs from the UGA Libraries' digital preservation storage (ARCHive) to A
 
 ## Status
 
-* The script has not been tested on a Mac yet.
-* This is based on the APTrust documented but has not been tested with their system yet. 
+* The script is tested on Windows 10. It is only partially tested (tar commands) on a Mac.
+* Resulted AIPs are validated by DART but have not successfully ingested to the demo site yet. 
 * Staff had not had an opportunity to provide feedback.
-* Script has several todos with ideas for improvements.
-* Moving forward, we could update the workflow for ARCHive AIPs so that they are also compatible with APTrust, other than needing to be unzipped.
 
 ## Workflow
 
