@@ -328,15 +328,14 @@ except (IndexError, FileNotFoundError, NotADirectoryError):
     exit()
 
 # Tracks the number of AIPs either fully converted or that encountered errors for including as a summary of the
-# script's success in the log.
+# script's success in the log. Records the start time to later calculate how long the script ran.
 aips_converted = 0
 aips_errors = 0
+script_start = datetime.datetime.today()
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Anticipated errors from any step and the results of bag validation are recorded in a log.
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
-script_start = datetime.datetime.today()
-log(f"Starting conversion of ARCHive AIPs to APTrust-compatible AIPs at {script_start}.")
 for item in os.listdir():
 
     # Skip anything in the AIPs directory that isn't an AIP based on the file extension.
@@ -426,12 +425,9 @@ for item in os.listdir():
     log("Processing complete for this AIP.")
     aips_converted += 1
 
-# Logs the end of the script, including summary information about script's success.
+# Prints summary information about script's success.
 script_end = datetime.datetime.today()
-log(f"\nScript completed at {script_end}")
-log(f"Time to complete: {script_end - script_start}")
-log(f"{aips_converted} AIPs were successfully converted.")
-log(f"{aips_errors} AIPs had errors and could not be converted.")
-
-# Prints a summary of success to the terminal so staff get immediate feedback, prior to opening the log.
-print(f"\nScript is complete. {aips_converted} AIPs were successfully converted. {aips_errors} had errors.")
+print(f"\nScript completed at {script_end}")
+print(f"Time to complete: {script_end - script_start}")
+print(f"{aips_converted} AIPs were successfully converted.")
+print(f"{aips_errors} AIPs had errors and could not be converted.")
