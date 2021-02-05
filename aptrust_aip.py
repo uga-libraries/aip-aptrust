@@ -150,9 +150,15 @@ def update_characters(aip):
             for name in changed_names:
                 writer.writerow([name[0], name[1]])
 
-    # Returns the new_aip_name so the rest of the script can still refer to the bag.
+    # Creates a variable with a message for the log (if any names were changed or not).
+    if len(changed_names) == 0:
+        log_message = "No renaming"
+    else:
+        log_message = "At least one name was renamed."
+
+    # Returns the new_aip_name so the rest of the script can still refer to the bag and the log message.
     # In the vast majority of cases, this is still identical to the original AIP name.
-    return new_aip_name
+    return new_aip_name, log_message
 
 
 def length_check(aip):
@@ -323,7 +329,7 @@ aips_errors = 0
 script_start = datetime.datetime.today()
 
 # Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
-log = open(f"AIP_Conversation_Log_{script_start.date()}.csv", "w", newline="")
+log = open(f"AIP_Conversion_Log_{script_start.date()}.csv", "w", newline="")
 log_writer = csv.writer(log)
 log_writer.writerow(["AIP", "Files Renamed", "Errors", "Conversion Result"])
 
@@ -410,9 +416,8 @@ for item in os.listdir():
     # Produces a list of changed names for the AIP's preservation record.
     # Saves the new name for the AIP bag in case it was altered by this function so the script can continue acting on
     # the bag. If UGA naming conventions are followed, it will almost always be the same as aip_bag.
-    # TODO: know if any characters were found to update the log row correctly.
-    new_bag_name = update_characters(aip_bag)
-    log_row.append("No renaming")
+    new_bag_name, log_text = update_characters(aip_bag)
+    log_row.append(log_text)
 
     # Validates the bag in case there was a problem converting it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
