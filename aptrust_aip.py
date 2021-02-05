@@ -154,7 +154,7 @@ def update_characters(aip):
     if len(changed_names) == 0:
         log_message = "No renaming"
     else:
-        log_message = "At least one name was renamed."
+        log_message = "Some renaming"
 
     # Returns the new_aip_name so the rest of the script can still refer to the bag and the log message.
     # In the vast majority of cases, this is still identical to the original AIP name.
@@ -209,7 +209,8 @@ def validate_bag(aip):
 
     new_bag = bagit.Bag(aip)
 
-    # If the bag is valid, logs that the bag is valid, including the workflow step.
+    # If the bag is not valid, raises an error so the script can stop processing this AIP.
+    # Raising the error includes the validation error so that can be added to the log.
     try:
         new_bag.validate()
 
@@ -349,7 +350,7 @@ for item in os.listdir():
         regex = re.match("^(.*_bag).", item)
         aip_bag = regex.group(1)
     except AttributeError:
-        log_row.extend(["Did not get that far", "The bag name is not in the expected format, aip-id_bag.", "Not fully converted"])
+        log_row.extend(["Did not get that far", "The bag name is not formatted aip-id_bag.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("bag_name", item)
         aips_errors += 1
@@ -364,7 +365,7 @@ for item in os.listdir():
     try:
         validate_bag(aip_bag)
     except ValueError as error:
-        log_row.extend(["Did not get that far", f"The unpacked bag is not valid: {error.args[0]}", "Not fully converted"])
+        log_row.extend(["Did not get that far", f"The unpacked bag is not valid: {error.args[0]}", "Not converted"])
         log_writer.writerow(log_row)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
@@ -374,7 +375,7 @@ for item in os.listdir():
     # Stops processing this AIP if it is too big (above 5 TB).
     size_ok = size_check(aip_bag)
     if not size_ok:
-        log_row.extend(["Did not get that far", "This AIP is above the 5TB limit.", "Not fully converted"])
+        log_row.extend(["Did not get that far", "This AIP is above the 5TB limit.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("bag_too_big", aip_bag)
         aips_errors += 1
@@ -384,7 +385,7 @@ for item in os.listdir():
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
     length_ok = length_check(aip_bag)
     if not length_ok:
-        log_row.extend(["Did not get that far", "This AIP has at least one file or directory outside the character limit.", "Not fully converted"])
+        log_row.extend(["Did not get that far", "At least one name is outside the character limit.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("name_length", aip_bag)
         aips_errors += 1
@@ -395,13 +396,13 @@ for item in os.listdir():
     try:
         add_bag_metadata(aip_bag)
     except FileNotFoundError:
-        log_row.extend(["Did not get that far", "This AIP does not have a preservation.xml file.", "Not fully converted"])
+        log_row.extend(["Did not get that far", "The preservation.xml is missing.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("no_preservationxml", aip_bag)
         aips_errors += 1
         continue
     except ValueError as error:
-        log_row.extend(["Did not get that far", f"This AIP is missing required {error.args[0]} field in the preservation.xml.", "Not fully converted"])
+        log_row.extend(["Did not get that far", f"The preservation.xml is missing the {error.args[0]}.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("incomplete_preservationxml", aip_bag)
         aips_errors += 1
@@ -419,7 +420,7 @@ for item in os.listdir():
     try:
         validate_bag(new_bag_name)
     except ValueError as error:
-        log_row.extend([f"The bag after the character check and adding bag metadata is not valid: {error.args[0]}", "Not fully converted"])
+        log_row.extend([f"The bag after updating is not valid: {error.args[0]}.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("updated_bag_not_valid", new_bag_name)
         aips_errors += 1
@@ -428,7 +429,7 @@ for item in os.listdir():
     # Tars the bag. The tar file is saved to a folder named "aptrust-aips" within the AIPs directory.
     tar_bag(new_bag_name)
 
-    log_row.extend(["No errors detected", "Conversation completed"])
+    log_row.extend(["No errors detected.", "Conversion completed"])
     log_writer.writerow(log_row)
     aips_converted += 1
 
