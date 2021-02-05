@@ -216,12 +216,7 @@ def validate_bag(aip):
     # If the bag is not valid, adds each error as its own line to the log.
     # The bagit error output has a block of text with errors divided by semicolons.
     except bagit.BagValidationError as errors:
-        # error_list = str(errors).split("; ")
-        # for error_line in error_list:
-        #     log(f"\n{error_line}")
-
-        # Error used for the script to stop processing this AIP.
-        raise ValueError
+        raise ValueError(errors)
 
 
 def add_bag_metadata(aip):
@@ -329,9 +324,10 @@ aips_errors = 0
 script_start = datetime.datetime.today()
 
 # Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
+# TODO: should logs be saved in the aptrust-aips folder instead of mixed with the original files and bags?
 log = open(f"AIP_Conversion_Log_{script_start.date()}.csv", "w", newline="")
 log_writer = csv.writer(log)
-log_writer.writerow(["AIP", "Files Renamed", "Errors", "Conversion Result"])
+log_writer.writerow(["AIP", "Renaming", "Errors", "Conversion Result"])
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Anticipated errors from any step and the results of bag validation are recorded in a log.
@@ -365,11 +361,10 @@ for item in os.listdir():
 
     # Validates the unpacked bag in case there was a problem during storage or unpacking.
     # Stops processing this AIP if the bag is invalid.
-    # TODO: capture bag error.
     try:
         validate_bag(aip_bag)
-    except ValueError:
-        log_row.extend(["Did not get that far", "The unpacked bag is not valid.", "Not fully converted"])
+    except ValueError as error:
+        log_row.extend(["Did not get that far", f"The unpacked bag is not valid: {error.args[0]}", "Not fully converted"])
         log_writer.writerow(log_row)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
@@ -421,11 +416,10 @@ for item in os.listdir():
 
     # Validates the bag in case there was a problem converting it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
-    # TODO: capture bag error
     try:
         validate_bag(new_bag_name)
-    except ValueError:
-        log_row.extend(["The bag after the character check and adding bag metadata is not valid.", "Not fully converted"])
+    except ValueError as error:
+        log_row.extend([f"The bag after the character check and adding bag metadata is not valid: {error.args[0]}", "Not fully converted"])
         log_writer.writerow(log_row)
         move_error("updated_bag_not_valid", new_bag_name)
         aips_errors += 1
