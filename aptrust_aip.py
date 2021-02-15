@@ -51,6 +51,20 @@ def unpack(aip_zip):
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
 
+def validate_bag(aip):
+    """Validates the bag. Validation errors are both printed to the terminal by bagit and raised as an error so they
+    can be saved to the log and so that the script knows to stop processing this AIP. """
+
+    new_bag = bagit.Bag(aip)
+
+    # If the bag is not valid, raises an error so the script can stop processing this AIP.
+    # Raising the error includes the validation error so that can be added to the log.
+    try:
+        new_bag.validate()
+    except bagit.BagValidationError as errors:
+        raise ValueError(errors)
+
+
 def size_check(aip):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
@@ -71,6 +85,118 @@ def size_check(aip):
 
     # Evaluate if the size is below the 5 TB limit and return the result (True or False).
     return bag_size < 5000000000000
+
+
+def length_check(aip):
+    """Tests if the file and directory name lengths are at least one character but no longer than 255 characters.
+    Returns True if all names are within the limits or False if any names are outside the limit. Also creates a
+    document with any names that are outside the limit for staff review. """
+
+    # Makes a list to store tuples with the path and number of characters for any name outside the limits.
+    wrong_length = []
+
+    # Checks the length of the AIP (top level folder).
+    # If it is too long or 0, adds it and its length to the wrong_length list.
+    # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
+    if len(aip) > 255 or len(aip) == 0:
+        wrong_length.append((aip, len(aip)))
+
+    # Checks the length of every directory and file.
+    # If any name is too long or 0, adds its full path and its length to the wrong_length list.
+    for root, directories, files in os.walk(aip):
+        for directory in directories:
+            if len(directory) > 255 or len(directory) == 0:
+                path = os.path.join(root, directory)
+                wrong_length.append((path, len(directory)))
+        for file in files:
+            if len(file) > 255 or len(file) == 0:
+                path = os.path.join(root, file)
+                wrong_length.append((path, len(file)))
+
+    # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
+    # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
+    if len(wrong_length) > 0:
+        with open("character_limit_error.csv", "a", newline='') as result:
+            writer = csv.writer(result)
+            # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
+            if os.path.getsize("character_limit_error.csv") == 0:
+                writer.writerow(["Path", "Length of Name"])
+            for name in wrong_length:
+                writer.writerow([name[0], name[1]])
+        return False
+    else:
+        return True
+
+
+def add_bag_metadata(aip):
+    """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
+    fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file that is in the
+    AIP's metadata folder. """
+
+    # Namespaces that find() will use when navigating the preservation.xml.
+    ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
+
+    # Parses the data from the preservation.xml.
+    # If the preservation.xml is not found, raises an error so the script can stop processing this AIP.
+    try:
+        tree = et.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
+        root = tree.getroot()
+    except FileNotFoundError:
+        raise FileNotFoundError
+
+    # For the next three try/except blocks, et.ParseError is from not finding the expected field in the preservation.xml
+    # and AttributeError is from trying to get text from the variable for the missing field, which has a value of None.
+
+    # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
+    # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
+    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    try:
+        object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
+        uri = object_id_field.text
+        group = uri[28:]
+    except (et.ParseError, AttributeError):
+        raise ValueError("premis:objectIdentifierType")
+
+    # Gets the title from the value of the title element.
+    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
+    try:
+        title_field = root.find("dc:title", ns)
+        title = title_field.text
+    except (et.ParseError, AttributeError):
+        raise ValueError("dc:title")
+
+    # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
+    # If there is no collection id (e.g. for some web archives), supplies default text.
+    id_path = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
+    try:
+        relationship_id_field = root.find(id_path, ns)
+        collection = relationship_id_field.text
+    except (et.ParseError, AttributeError):
+        collection = "This AIP is not part of a collection."
+
+    # For DLG newspapers, the first relationship is dlg and the second is the collection.
+    # Updates the value of collection to be the text of the second relationship instead.
+    if collection == "dlg":
+        id = "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
+        collection = root.find(id, ns).text
+
+    # Adds the required fields to bagit-info.txt.
+    bag = bagit.Bag(aip)
+    bag.info['Source-Organization'] = "University of Georgia"
+    bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
+    bag.info['Internal-Sender-Identifier'] = aip.replace("_bag", "")
+    bag.info['Bag-Group-Identifier'] = collection
+
+    # Makes aptrust-info.txt.
+    with open(f"{aip}/aptrust-info.txt", "w") as new_file:
+        new_file.write(f"Title: {title}\n")
+        new_file.write("Description: TBD\n")
+        new_file.write("Access: Institution\n")
+        new_file.write("Storage-Option: Glacier-Deep-OR\n")
+
+    # Saves the bag, which updates the tag manifests with the new file aptrust-info.txt and the new checksums for the
+    # edited file bagit-info.txt so the bag remains valid.
+    bag.save(manifests=True)
 
 
 def update_characters(aip):
@@ -159,132 +285,6 @@ def update_characters(aip):
     # Returns the new_aip_name so the rest of the script can still refer to the bag and the log message.
     # In the vast majority of cases, this is still identical to the original AIP name.
     return new_aip_name, log_message
-
-
-def length_check(aip):
-    """Tests if the file and directory name lengths are at least one character but no longer than 255 characters.
-    Returns True if all names are within the limits or False if any names are outside the limit. Also creates a
-    document with any names that are outside the limit for staff review. """
-
-    # Makes a list to store tuples with the path and number of characters for any name outside the limits.
-    wrong_length = []
-
-    # Checks the length of the AIP (top level folder).
-    # If it is too long or 0, adds it and its length to the wrong_length list.
-    # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip) > 255 or len(aip) == 0:
-        wrong_length.append((aip, len(aip)))
-
-    # Checks the length of every directory and file.
-    # If any name is too long or 0, adds its full path and its length to the wrong_length list.
-    for root, directories, files in os.walk(aip):
-        for directory in directories:
-            if len(directory) > 255 or len(directory) == 0:
-                path = os.path.join(root, directory)
-                wrong_length.append((path, len(directory)))
-        for file in files:
-            if len(file) > 255 or len(file) == 0:
-                path = os.path.join(root, file)
-                wrong_length.append((path, len(file)))
-
-    # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
-    # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
-    if len(wrong_length) > 0:
-        with open("character_limit_error.csv", "a", newline='') as result:
-            writer = csv.writer(result)
-            # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
-            if os.path.getsize("character_limit_error.csv") == 0:
-                writer.writerow(["Path", "Length of Name"])
-            for name in wrong_length:
-                writer.writerow([name[0], name[1]])
-        return False
-    else:
-        return True
-
-
-def validate_bag(aip):
-    """Validates the bag. Validation errors are both printed to the terminal by bagit and raised as an error so they
-    can be saved to the log and so that the script knows to stop processing this AIP. """
-
-    new_bag = bagit.Bag(aip)
-
-    # If the bag is not valid, raises an error so the script can stop processing this AIP.
-    # Raising the error includes the validation error so that can be added to the log.
-    try:
-        new_bag.validate()
-    except bagit.BagValidationError as errors:
-        raise ValueError(errors)
-
-
-def add_bag_metadata(aip):
-    """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
-    fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file that is in the
-    AIP's metadata folder. """
-
-    # Namespaces that find() will use when navigating the preservation.xml.
-    ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
-
-    # Parses the data from the preservation.xml.
-    # If the preservation.xml is not found, raises an error so the script can stop processing this AIP.
-    try:
-        tree = et.parse(f"{aip}/data/metadata/{aip.replace('_bag', '')}_preservation.xml")
-        root = tree.getroot()
-    except FileNotFoundError:
-        raise FileNotFoundError
-
-    # For the next three try/except blocks, et.ParseError is from not finding the expected field in the preservation.xml
-    # and AttributeError is from trying to get text from the variable for the missing field, which has a value of None.
-
-    # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
-    # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
-    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    try:
-        object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
-        uri = object_id_field.text
-        group = uri[28:]
-    except (et.ParseError, AttributeError):
-        raise ValueError("premis:objectIdentifierType")
-
-    # Gets the title from the value of the title element.
-    # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    try:
-        title_field = root.find("dc:title", ns)
-        title = title_field.text
-    except (et.ParseError, AttributeError):
-        raise ValueError("dc:title")
-
-    # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
-    # If there is no collection id (e.g. for some web archives), supplies default text.
-    id_path = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
-    try:
-        relationship_id_field = root.find(id_path, ns)
-        collection = relationship_id_field.text
-    except (et.ParseError, AttributeError):
-        collection = "This AIP is not part of a collection."
-
-    # For DLG newspapers, the first relationship is dlg and the second is the collection.
-    # Updates the value of collection to be the text of the second relationship instead.
-    if collection == "dlg":
-        id = "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
-        collection = root.find(id, ns).text
-
-    # Adds the required fields to bagit-info.txt.
-    bag = bagit.Bag(aip)
-    bag.info['Source-Organization'] = "University of Georgia"
-    bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
-    bag.info['Internal-Sender-Identifier'] = aip.replace("_bag", "")
-    bag.info['Bag-Group-Identifier'] = collection
-
-    # Makes aptrust-info.txt.
-    with open(f"{aip}/aptrust-info.txt", "w") as new_file:
-        new_file.write(f"Title: {title}\n")
-        new_file.write("Description: TBD\n")
-        new_file.write("Access: Institution\n")
-        new_file.write("Storage-Option: Glacier-Deep-OR\n")
-
-    # Saves the bag, which updates the tag manifests with the new file aptrust-info.txt and the new checksums for the
-    # edited file bagit-info.txt so the bag remains valid.
-    bag.save(manifests=True)
 
 
 def tar_bag(aip):
