@@ -1,6 +1,6 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Batch converts AIPs from ARCHive into AIPs compatible with APTrust.
-# Prior to running this script, export the AIPs from ARCHive and save to a folder (aips directory).
+# Prior to running this script, export the AIPs from ARCHive and save to a folder (AIPs directory).
 
 # Script usage: python /path/aptrust_aip.py /path/aips_directory
 
@@ -26,8 +26,7 @@ def move_error(error_name, aip):
 
 def unpack(aip_zip):
     """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux. The result is
-    the AIP's bag directory, named aip-id_bag. """
-    # TODO: ideally, delete the tar for tar.bz2 files so only have the originals left in the AIPs directory.
+    the AIP's bag directory, named aip-id_bag. The original tar and zip files also remain in the directory. """
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
@@ -46,7 +45,8 @@ def unpack(aip_zip):
         aip_tar_path = os.path.join(aips_directory, aip_tar)
         subprocess.run(f'7z x "{aip_tar_path}"', stdout=subprocess.DEVNULL, shell=True)
 
-    # For Mac and Linux, use tar to extract the files. One command will extract from both tar and zip at once.
+    # For Mac and Linux, use tar to extract the AIP's bag directory.
+    # This command works if the AIP is tarred and zipped or if it is just tarred.
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
@@ -130,8 +130,8 @@ def update_characters(aip):
         for directory in directories:
             rename(directory)
 
-    # Updates the AIP name if it starts with a dash or contains impermissible characters. Checking the AIP instead of
-    # root because everything in root except the top level folder (AIP) was already updated as part of directories.
+    # Updates the AIP name if it starts with a dash or contains impermissible characters.
+    # Checking the AIP instead of root because everything in root except the AIP was updated as part of directories.
     new_aip_name = rename(aip, join_root=False)
 
     # Updates the bag manifests with the new names so it continues to be valid.
@@ -162,21 +162,21 @@ def update_characters(aip):
 
 
 def length_check(aip):
-    """Tests if the file and directory name lengths are at least one character long but shorter than the limit of 255
-    characters. Returns True if all names are within the limits or False if any names are outside the limit. Also
-    creates a document with any names that are outside the limit for staff review. """
+    """Tests if the file and directory name lengths are at least one character but no longer than 255 characters.
+    Returns True if all names are within the limits or False if any names are outside the limit. Also creates a
+    document with any names that are outside the limit for staff review. """
 
-    # Makes a list to store tuples with the path and number of characters for any name exceeding the limit.
+    # Makes a list to store tuples with the path and number of characters for any name outside the limits.
     wrong_length = []
 
-    # Checks the length of the AIP (top level folder). If it is too long, adds it and its length to the too_long
-    # list. Checking the AIP instead of root because everything in root except the top level folder (AIP) is also
-    # included individually in directories.
+    # Checks the length of the AIP (top level folder).
+    # If it is too long or 0, adds it and its length to the wrong_length list.
+    # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
     if len(aip) > 255 or len(aip) == 0:
         wrong_length.append((aip, len(aip)))
 
     # Checks the length of every directory and file.
-    # If any name is too long, adds its full path and its name length to the too_long list.
+    # If any name is too long or 0, adds its full path and its length to the wrong_length list.
     for root, directories, files in os.walk(aip):
         for directory in directories:
             if len(directory) > 255 or len(directory) == 0:
@@ -187,12 +187,12 @@ def length_check(aip):
                 path = os.path.join(root, file)
                 wrong_length.append((path, len(file)))
 
-    # If any names were too long, saves everything that was too long to a file for staff review and returns False so the
-    # script stops processing this AIP. Otherwise, returns True so the next step can start.
+    # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
+    # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
     if len(wrong_length) > 0:
         with open("character_limit_error.csv", "a", newline='') as result:
             writer = csv.writer(result)
-            # Adds a header if the CSV is empty, meaning this is the first AIP with names exceeding the maximum length.
+            # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
             if os.path.getsize("character_limit_error.csv") == 0:
                 writer.writerow(["Path", "Length of Name"])
             for name in wrong_length:
@@ -203,9 +203,8 @@ def length_check(aip):
 
 
 def validate_bag(aip):
-    """Validates the bag and logs the result. Logs even if the bag is valid to have a record of the last time the
-    bag was valid. Validation errors are both printed to the terminal by bagit and saved to the log. If the bag is
-    not valid, raises an error so that the script knows to stop processing this AIP. """
+    """Validates the bag. Validation errors are both printed to the terminal by bagit and raised as an error so they
+    can be saved to the log and so that the script knows to stop processing this AIP. """
 
     new_bag = bagit.Bag(aip)
 
@@ -213,19 +212,14 @@ def validate_bag(aip):
     # Raising the error includes the validation error so that can be added to the log.
     try:
         new_bag.validate()
-
-    # If the bag is not valid, adds each error as its own line to the log.
-    # The bagit error output has a block of text with errors divided by semicolons.
     except bagit.BagValidationError as errors:
         raise ValueError(errors)
 
 
 def add_bag_metadata(aip):
     """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
-    fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file included in the
-    AIP. """
-
-    # Gets metadata from the preservation.xml to use for fields in bagit-info.txt and aptrust-info.txt.
+    fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file that is in the
+    AIP's metadata folder. """
 
     # Namespaces that find() will use when navigating the preservation.xml.
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
@@ -238,10 +232,12 @@ def add_bag_metadata(aip):
     except FileNotFoundError:
         raise FileNotFoundError
 
+    # For the next three try/except blocks, et.ParseError is from not finding the expected field in the preservation.xml
+    # and AttributeError is from trying to get text from the variable for the missing field, which has a value of None.
+
     # Gets the group id from the value of the first objectIdentifierType (the ARCHive URI).
     # Starts at the 28th character to skip the ARCHive part of the URI and just get the group code.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (find returns None), AttributeError is from uri = None.text.
     try:
         object_id_field = root.find("aip/premis:object/premis:objectIdentifier/premis:objectIdentifierType", ns)
         uri = object_id_field.text
@@ -251,7 +247,6 @@ def add_bag_metadata(aip):
 
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
-    # ParseError means the field is not found (find returns None), AttributeError is from tile = None.text.
     try:
         title_field = root.find("dc:title", ns)
         title = title_field.text
@@ -260,7 +255,6 @@ def add_bag_metadata(aip):
 
     # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
     # If there is no collection id (e.g. for some web archives), supplies default text.
-    # ParseError means the field is not found (find returns None), AttributeError is from collection = None.text.
     id_path = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
     try:
         relationship_id_field = root.find(id_path, ns)
@@ -274,7 +268,7 @@ def add_bag_metadata(aip):
         id = "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
         collection = root.find(id, ns).text
 
-    # Adds required fields to bagit-info.txt.
+    # Adds the required fields to bagit-info.txt.
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
@@ -288,8 +282,8 @@ def add_bag_metadata(aip):
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Glacier-Deep-OR\n")
 
-    # Saves the bag to update the tag manifests to add aptrust-info.txt and update the checksums for bagit-info.txt.
-    # If successfully saves, adds note to log to document changes to the bag.
+    # Saves the bag, which updates the tag manifests with the new file aptrust-info.txt and the new checksums for the
+    # edited file bagit-info.txt so the bag remains valid.
     bag.save(manifests=True)
 
 
@@ -314,49 +308,47 @@ try:
     aips_directory = sys.argv[1]
     os.chdir(aips_directory)
 except (IndexError, FileNotFoundError, NotADirectoryError):
-    print("The aips directory is either missing or not a valid directory.")
+    print("The AIPs directory is either missing or not a valid directory:", aips_directory)
     print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
     exit()
 
-# Tracks the number of AIPs either fully converted or that encountered errors for including as a summary of the
-# script's success in the log. Records the start time to later calculate how long the script ran.
+# Tracks the number of AIPs fully converted or with errors for making a summary of the script's success.
+# Records the script start time to later calculate how long the script took to run.
 aips_converted = 0
 aips_errors = 0
 script_start = datetime.datetime.today()
 
 # Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
-# TODO: should logs be saved in the aptrust-aips folder instead of mixed with the original files and bags?
 log = open(f"AIP_Conversion_Log_{script_start.date()}.csv", "w", newline="")
 log_writer = csv.writer(log)
 log_writer.writerow(["AIP", "Renaming", "Errors", "Conversion Result"])
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
-# Anticipated errors from any step and the results of bag validation are recorded in a log.
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
 for item in os.listdir():
 
-    # Skip anything in the AIPs directory that isn't an AIP based on the file extension, such as the log.
+    # Skip anything in the AIPs directory that isn't an AIP, such as the log, based on the file extension.
     if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
         continue
 
     # Starts a list of information to be added to the log for this AIP.
-    # Write to the log when a known error is encountered or conversion is complete.
+    # Saves the information to the log when a known error is encountered or conversion is complete.
     log_row = [item]
-    print("STARTING PROCESSING ON:", item)
+    print("Starting conversion of:", item)
 
-    # Calculates the bag name (aip-id_bag) from the tar or zip name for referring to the AIP after the bag is extracted.
+    # Calculates the bag name (aip-id_bag) from the file name for referring to the AIP after the bag is extracted.
     # Stops processing this AIP if the bag name does not match the expected pattern.
     try:
         regex = re.match("^(.*_bag).", item)
         aip_bag = regex.group(1)
     except AttributeError:
-        log_row.extend(["Did not get that far", "The bag name is not formatted aip-id_bag.", "Not converted"])
+        log_row.extend(["n/a", "The bag name is not formatted aip-id_bag.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("bag_name", item)
         aips_errors += 1
         continue
 
-    # Unpacks the bag directory from the zip and/or tar file.
+    # Unpacks the AIP's bag directory from the zip and/or tar file.
     # The original zip and/or tar file is retained in case the script has errors and needs to be run again.
     unpack(item)
 
@@ -365,7 +357,7 @@ for item in os.listdir():
     try:
         validate_bag(aip_bag)
     except ValueError as error:
-        log_row.extend(["Did not get that far", f"The unpacked bag is not valid: {error.args[0]}", "Not converted"])
+        log_row.extend(["n/a", f"The unpacked bag is not valid: {error.args[0]}", "Not converted"])
         log_writer.writerow(log_row)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
@@ -375,7 +367,7 @@ for item in os.listdir():
     # Stops processing this AIP if it is too big (above 5 TB).
     size_ok = size_check(aip_bag)
     if not size_ok:
-        log_row.extend(["Did not get that far", "This AIP is above the 5TB limit.", "Not converted"])
+        log_row.extend(["n/a", "This AIP is above the 5TB limit.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("bag_too_big", aip_bag)
         aips_errors += 1
@@ -385,7 +377,7 @@ for item in os.listdir():
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
     length_ok = length_check(aip_bag)
     if not length_ok:
-        log_row.extend(["Did not get that far", "At least one name is outside the character limit.", "Not converted"])
+        log_row.extend(["n/a", "At least one name is outside the character limit.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("name_length", aip_bag)
         aips_errors += 1
@@ -396,13 +388,13 @@ for item in os.listdir():
     try:
         add_bag_metadata(aip_bag)
     except FileNotFoundError:
-        log_row.extend(["Did not get that far", "The preservation.xml is missing.", "Not converted"])
+        log_row.extend(["n/a", "The preservation.xml is missing.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("no_preservationxml", aip_bag)
         aips_errors += 1
         continue
     except ValueError as error:
-        log_row.extend(["Did not get that far", f"The preservation.xml is missing the {error.args[0]}.", "Not converted"])
+        log_row.extend(["n/a", f"The preservation.xml is missing the {error.args[0]}.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("incomplete_preservationxml", aip_bag)
         aips_errors += 1
@@ -429,6 +421,7 @@ for item in os.listdir():
     # Tars the bag. The tar file is saved to a folder named "aptrust-aips" within the AIPs directory.
     tar_bag(new_bag_name)
 
+    # Updates the log for the successfully converted AIP.
     log_row.extend(["No errors detected.", "Conversion completed"])
     log_writer.writerow(log_row)
     aips_converted += 1
