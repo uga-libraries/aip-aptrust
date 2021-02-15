@@ -51,20 +51,6 @@ def unpack(aip_zip):
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
 
-def validate_bag(aip):
-    """Validates the bag. Validation errors are both printed to the terminal by bagit and raised as an error so they
-    can be saved to the log and so that the script knows to stop processing this AIP. """
-
-    new_bag = bagit.Bag(aip)
-
-    # If the bag is not valid, raises an error so the script can stop processing this AIP.
-    # Raising the error includes the validation error so that can be added to the log.
-    try:
-        new_bag.validate()
-    except bagit.BagValidationError as errors:
-        raise ValueError(errors)
-
-
 def size_check(aip):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
@@ -355,9 +341,10 @@ for item in os.listdir():
     # Validates the unpacked bag in case there was a problem during storage or unpacking.
     # Stops processing this AIP if the bag is invalid.
     try:
-        validate_bag(aip_bag)
-    except ValueError as error:
-        log_row.extend(["n/a", f"The unpacked bag is not valid: {error.args[0]}", "Not converted"])
+        aip_bagit_object = bagit.Bag(aip_bag)
+        aip_bagit_object.validate()
+    except bagit.BagValidationError as errors:
+        log_row.extend(["n/a", f"The unpacked bag is not valid: {errors}", "Not converted"])
         log_writer.writerow(log_row)
         move_error("unpacked_bag_not_valid", aip_bag)
         aips_errors += 1
@@ -410,9 +397,10 @@ for item in os.listdir():
     # Validates the bag in case there was a problem converting it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
     try:
-        validate_bag(new_bag_name)
-    except ValueError as error:
-        log_row.extend([f"The bag after updating is not valid: {error.args[0]}.", "Not converted"])
+        aip_bagit_object = bagit.Bag(aip_bag)
+        aip_bagit_object.validate()
+    except bagit.BagValidationError as errors:
+        log_row.extend(["n/a", f"The updated bag is not valid: {errors}", "Not converted"])
         log_writer.writerow(log_row)
         move_error("updated_bag_not_valid", new_bag_name)
         aips_errors += 1
