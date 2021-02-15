@@ -5,14 +5,14 @@ Convert AIPs from the UGA Libraries' digital preservation storage (ARCHive) to A
 ## Status
 
 * The script is tested on Windows 10. It is only partially tested (tar commands) on a Mac.
-* Resulted AIPs are validated by DART but have not successfully ingested to the demo site yet. 
+* AIPs have been ingested into APTrust demo. 
 * Staff had not had an opportunity to provide feedback.
 
 ## Workflow
 
 This is a batch workflow, which undertakes the following steps on each AIP in a folder. If an anticipated error is encountered, it is added to the script log, and the bag is moved to a folder named with the error to avoid further processing.
 
-1. Unzips and untars the AIP, resulting in a bag. Validate the bag.
+1. Unzips and untars the AIP, resulting in a bag. Validates the bag.
 
 2. Validates the bag against APTrust requirements. Stops processing if the limits are exceeded.
    * The entire bag must be under 5 TB.
@@ -28,23 +28,22 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 
 ## Explanation of fields added to bagit.info.txt:
 
-* Source-Organization: APTrust subgroup name (University of Georgia)
-* Internal-Sender-Description: ARCHive group, to differentiate between departments
-* Internal-Sender-Identifier: the AIP ID, which is everything from the bag name except the "_bag" suffix
-* Bag-Group-Identifier: the archival collection the AIP is part of or default text indicating it is not part of a collection
+* **Source-Organization:** APTrust subgroup name (University of Georgia)
+* **Internal-Sender-Description:** ARCHive group, to differentiate between departments
+* **Internal-Sender-Identifier:** the AIP ID, which is everything from the bag name except the "_bag" suffix
+* **Bag-Group-Identifier:** the archival collection the AIP is part of or default text indicating it is not part of a collection
 
 ## Explanation of fields used in aptrust-info.txt:
 
-* Title: Title of AIP in ARCHive
-* Description: ?????
-* Access: rights information in APTrust (Institution)
-* Storage-Option: storage type to use in APTrust (Glacier-Deep-OR)
+* **Title:** Title of AIP in ARCHive
+* **Description:** ?????
+* **Access:** rights information in APTrust (Institution)
+* **Storage-Option:** storage type to use in APTrust (Glacier-Deep-OR)
 
 ## Workflow decisions to be made by staff
 
 * APTrust overwrites old AIPs with a new version. Do we want all versions or just most recent in APTrust?
-* Changes to the log structure (csv?) or content (more or less info) or name (date?)?
+* Changes to the log?
 * Save the name change log to the AIP metadata folder?
 * Use of fields, especially description, in bagit-info.txt and aptrust-info.txt?
-* Ok with replacing those characters with underscores? Unlikely to come up unless someone starts an AIP with dash
-* Delete the bag and just have the final tar files or helpful to have unpacked for review? Currently, the bag is not deleted.
+* Ok with replacing those characters with underscores? Should be rare.
