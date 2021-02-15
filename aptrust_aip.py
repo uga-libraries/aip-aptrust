@@ -207,6 +207,8 @@ def update_characters(aip):
             new_name = "_" + new_name[1:]
 
         # If any impermissible characters are present in the new name, replaces them with underscores.
+        # Not permitted: newline, carriage return, tab, vertical tab, and ascii bells.
+        not_permitted = ["\n", "\r", "\t", "\v", "\a"]
         for character in not_permitted:
             if character in new_name:
                 new_name = new_name.replace(character, "_")
@@ -224,10 +226,6 @@ def update_characters(aip):
 
         # This is needed for AIPs only, so the script can continue to refer to the bag.
         return new_name
-
-    # List of special characters that are not permitted: newline, carriage return, tab, vertical tab, and ascii bells.
-    # Note: Could not test in file or directory names since none are permitted by a modern OS. Tested within text files.
-    not_permitted = ["\n", "\r", "\t", "\v", "\a"]
 
     # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
     # Values are added to this list within rename()
