@@ -15,18 +15,18 @@ import sys
 import xml.etree.ElementTree as et
 
 
-def move_error(error_name, aip, aip_name):
+def move_error(error_name, aip_path, aip_name):
     """Moves the AIP folder to an error folder, named with the error type, so it is clear what step the AIP stopped on.
     Makes the error folder if it does not already exist prior to moving the AIP folder. """
 
     if not os.path.exists(f"errors/{error_name}"):
         os.makedirs(f"errors/{error_name}")
-    os.replace(aip, f"errors/{error_name}/{aip_name}")
+    os.replace(aip_path, f"errors/{error_name}/{aip_name}")
 
 
 def unpack(aip_zip):
     """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux. The result is
-    the AIP's bag directory, named aip-id_bag, which is saved to a folder named aptrust-aips within the AIPs
+    the AIP's bag directory, named aip_path-id_bag, which is saved to a folder named aptrust-aips within the AIPs
     directory. The original tar and zip files remain in the AIPs directory in case the script needs to be run again. """
 
     # Gets the operating system, which determines the command for unzipping and untarring.
@@ -55,19 +55,19 @@ def unpack(aip_zip):
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
 
-def size_check(aip):
+def size_check(aip_path):
     """Tests if the bag is smaller than the limit of 5 TB and returns True or False. """
 
     # Variable for calculating the total bag size.
     bag_size = 0
 
     # Adds the size of all the bag metadata files.
-    for file in os.listdir(aip):
+    for file in os.listdir(aip_path):
         if file.endswith('.txt'):
-            bag_size += os.path.getsize(f"{aip}/{file}")
+            bag_size += os.path.getsize(f"{aip_path}/{file}")
 
     # Adds the bag payload size (the size of everything in the bag data folder) to the bag size.
-    bag_info = open(f"{aip}/bag-info.txt", "r")
+    bag_info = open(f"{aip_path}/bag-info.txt", "r")
     for line in bag_info:
         if line.startswith("Payload-Oxum"):
             payload = line.split()[1]
@@ -77,7 +77,7 @@ def size_check(aip):
     return bag_size < 5000000000000
 
 
-def length_check(aip):
+def length_check(aip_path):
     """Tests if the file and directory name lengths are at least one character but no longer than 255 characters.
     Returns True if all names are within the limits or False if any names are outside the limit. Also creates a
     document with any names that are outside the limit for staff review. """
@@ -88,12 +88,12 @@ def length_check(aip):
     # Checks the length of the AIP (top level folder).
     # If it is too long or 0, adds it and its length to the wrong_length list.
     # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip) > 255 or len(aip) == 0:
-        wrong_length.append((aip, len(aip)))
+    if len(aip_path) > 255 or len(aip_path) == 0:
+        wrong_length.append((aip_path, len(aip_path)))
 
     # Checks the length of every directory and file.
     # If any name is too long or 0, adds its full path and its length to the wrong_length list.
-    for root, directories, files in os.walk(aip):
+    for root, directories, files in os.walk(aip_path):
         for directory in directories:
             if len(directory) > 255 or len(directory) == 0:
                 path = os.path.join(root, directory)
@@ -118,7 +118,7 @@ def length_check(aip):
         return True
 
 
-def add_bag_metadata(aip, aip_name):
+def add_bag_metadata(aip_path, aip_name):
     """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt. The values for the metadata
     fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file that is in the
     AIP's metadata folder. """
@@ -129,7 +129,7 @@ def add_bag_metadata(aip, aip_name):
     # Parses the data from the preservation.xml.
     # If the preservation.xml is not found, raises an error so the script can stop processing this AIP.
     try:
-        tree = et.parse(f"{aip}/data/metadata/{aip_name.replace('_bag', '')}_preservation.xml")
+        tree = et.parse(f"{aip_path}/data/metadata/{aip_name.replace('_bag', '')}_preservation.xml")
         root = tree.getroot()
     except FileNotFoundError:
         raise FileNotFoundError
@@ -155,9 +155,9 @@ def add_bag_metadata(aip, aip_name):
     except (et.ParseError, AttributeError):
         raise ValueError("dc:title")
 
-    # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip section.
+    # Gets the collection id from the value of the first relatedObjectIdentifierValue in the aip_path section.
     # If there is no collection id (e.g. for some web archives), supplies default text.
-    id_path = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
+    id_path = "aip_path/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
     try:
         relationship_id_field = root.find(id_path, ns)
         collection = relationship_id_field.text
@@ -167,18 +167,18 @@ def add_bag_metadata(aip, aip_name):
     # For DLG newspapers, the first relationship is dlg and the second is the collection.
     # Updates the value of collection to be the text of the second relationship instead.
     if collection == "dlg":
-        id = "aip/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
+        id = "aip_path/premis:object/premis:relationship[2]/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
         collection = root.find(id, ns).text
 
     # Adds the required fields to bagit-info.txt.
-    bag = bagit.Bag(aip)
+    bag = bagit.Bag(aip_path)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
     bag.info['Internal-Sender-Identifier'] = aip_name.replace("_bag", "")
     bag.info['Bag-Group-Identifier'] = collection
 
     # Makes aptrust-info.txt.
-    with open(f"{aip}/aptrust-info.txt", "w") as new_file:
+    with open(f"{aip_path}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
         new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
@@ -189,7 +189,7 @@ def add_bag_metadata(aip, aip_name):
     bag.save(manifests=True)
 
 
-def update_characters(aip, aip_name):
+def update_characters(aip_path, aip_name):
     """Finds impermissible characters in file and directory names and replaces them with underscores. Names must not
     start with a dash or contain any of 5 whitespace characters. """
 
@@ -234,7 +234,7 @@ def update_characters(aip, aip_name):
 
     # Iterates through the directory, starting from the bottom, so that as directory names are changed it does not
     # impact paths for directories that have not yet been tested.
-    for root, directories, files in os.walk(aip, topdown=False):
+    for root, directories, files in os.walk(aip_path, topdown=False):
 
         # Updates any file name that starts with a dash or contains impermissible characters.
         for file in files:
@@ -275,20 +275,20 @@ def update_characters(aip, aip_name):
     return new_aip_path, log_message
 
 
-def tar_bag(aip):
+def tar_bag(aip_path):
     """Tars the bag, using the appropriate command for Windows (7zip) or Mac/Linux (tar) operating systems."""
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
 
-    bag_path = os.path.join(aips_directory, aip)
+    bag_path = os.path.join(aips_directory, aip_path)
 
     # Tars the AIP using the operating system-specific command.
     if operating_system == "Windows":
-        subprocess.run(f'7z -ttar a "{aip}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
+        subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
         # TODO: confirm this updated path saves in the pre-existing aptrust-aips directory.
-        subprocess.run(f'tar -cf {aip}.tar "{aip}"', shell=True)
+        subprocess.run(f'tar -cf {aip_path}.tar "{aip_path}"', shell=True)
 
 
 # Gets the directory from the script argument. If it is missing, prints an error and quits the script.
@@ -332,13 +332,13 @@ for item in os.listdir():
     log_row = [item]
     print("Starting conversion of:", item)
 
-    # Calculates the bag name (aip-id_bag) from the file name for referring to the AIP after the bag is extracted.
+    # Calculates the bag name (aip_path-id_bag) from the file name for referring to the AIP after the bag is extracted.
     # Stops processing this AIP if the bag name does not match the expected pattern.
     try:
         regex = re.match("^(.*_bag).", item)
         aip_bag_name = regex.group(1)
     except AttributeError:
-        log_row.extend(["n/a", "The bag name is not formatted aip-id_bag.", "Not converted"])
+        log_row.extend(["n/a", "The bag name is not formatted aip_path-id_bag.", "Not converted"])
         log_writer.writerow(log_row)
         move_error("bag_name", item, item)
         aips_errors += 1
