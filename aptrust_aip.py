@@ -174,7 +174,7 @@ def add_bag_metadata(aip, aip_name):
     bag = bagit.Bag(aip)
     bag.info['Source-Organization'] = "University of Georgia"
     bag.info['Internal-Sender-Description'] = f"UGA unit: {group}"
-    bag.info['Internal-Sender-Identifier'] = aip.replace("_bag", "")
+    bag.info['Internal-Sender-Identifier'] = aip_name.replace("_bag", "")
     bag.info['Bag-Group-Identifier'] = collection
 
     # Makes aptrust-info.txt.
