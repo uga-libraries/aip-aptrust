@@ -409,14 +409,13 @@ for item in os.listdir():
 
     # Validates the bag in case there was a problem converting it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
-    # TODO: test this part of the code. Have only tested validate at the start.
     try:
         aip_bagit_object = bagit.Bag(new_bag_path)
         aip_bagit_object.validate()
     except bagit.BagValidationError as errors:
         log_row.extend(["n/a", f"The updated bag is not valid: {errors}", "Not converted"])
         log_writer.writerow(log_row)
-        move_error("updated_bag_not_valid", os.path.join("aptrust-aips", new_bag_path), new_bag_path)
+        move_error("updated_bag_not_valid", new_bag_path, new_bag_path[13:])
         aips_errors += 1
         exit()
 
