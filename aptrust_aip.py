@@ -149,13 +149,10 @@ def add_bag_metadata(aip_path, aip_name):
     except (et.ParseError, AttributeError):
         raise ValueError("premis:objectIdentifierType")
 
-    # TODO: be consistent about when .text is a separate variable or not. Generally merge unless need to parse like uri.
-
     # Gets the title from the value of the title element.
     # If this field (which is required) is missing, raises an error so the script can stop processing this AIP.
     try:
-        title_field = root.find("dc:title", ns)
-        title = title_field.text
+        title = root.find("dc:title", ns).text
     except (et.ParseError, AttributeError):
         raise ValueError("dc:title")
 
@@ -163,8 +160,7 @@ def add_bag_metadata(aip_path, aip_name):
     # If there is no collection id (e.g. for some web archives), supplies default text.
     id = "aip/premis:object/premis:relationship/premis:relatedObjectIdentifier/premis:relatedObjectIdentifierValue"
     try:
-        relationship_id_field = root.find(id, ns)
-        collection = relationship_id_field.text
+        collection = root.find(id, ns).text
     except (et.ParseError, AttributeError):
         collection = "This AIP is not part of a collection."
 
