@@ -189,7 +189,7 @@ def add_bag_metadata(aip, aip_name):
     bag.save(manifests=True)
 
 
-def update_characters(aip):
+def update_characters(aip, aip_name):
     """Finds impermissible characters in file and directory names and replaces them with underscores. Names must not
     start with a dash or contain any of 5 whitespace characters. """
 
@@ -215,18 +215,18 @@ def update_characters(aip):
                 new_name = new_name.replace(character, "_")
 
         # If the new name is different from the original name, renames the file or directory to the new name.
-        # The default is to include the root as part of the path, but this is not done for AIPs (AIP is the root).
+        # The default is to include the root as part of the path, but for AIPs (AIP is the root) just add aptrust-aips.
         # Also saves the original and new name to a list of changed names to use for making a record of the change.
         if not original == new_name:
             if join_root:
                 changed_names.append((os.path.join(root, original), os.path.join(root, new_name)))
                 os.replace(os.path.join(root, original), os.path.join(root, new_name))
             else:
-                changed_names.append((original, new_name))
-                os.replace(original, new_name)
+                changed_names.append((os.path.join("aptrust-aips", original), os.path.join("aptrust-aips", new_name)))
+                os.replace(os.path.join("aptrust-aips", original), os.path.join("aptrust-aips", new_name))
 
         # This is needed for AIPs only, so the script can continue to refer to the bag.
-        return new_name
+        return os.path.join("aptrust-aips", new_name)
 
     # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
     # Values are added to this list within rename()
@@ -246,11 +246,11 @@ def update_characters(aip):
 
     # Updates the AIP name if it starts with a dash or contains impermissible characters.
     # Checking the AIP instead of root because everything in root except the AIP was updated as part of directories.
-    new_aip_name = rename(aip, join_root=False)
+    new_aip_path = rename(aip_name, join_root=False)
 
     # Updates the bag manifests with the new names so it continues to be valid.
     # Note: bagit prints to the terminal that each renamed thing is not in the manifest, but the resulting bag is valid.
-    bag = bagit.Bag(new_aip_name)
+    bag = bagit.Bag(new_aip_path)
     bag.save(manifests=True)
 
     # If any names were changed, saves them to a CSV as a record of actions taken on the AIP. If the AIP name was
@@ -272,7 +272,7 @@ def update_characters(aip):
 
     # Returns the new_aip_name so the rest of the script can still refer to the bag and the log message.
     # In the vast majority of cases, this is still identical to the original AIP name.
-    return new_aip_name, log_message
+    return new_aip_path, log_message
 
 
 def tar_bag(aip):
@@ -404,24 +404,24 @@ for item in os.listdir():
     # Produces a list of changed names for the AIP's preservation record.
     # Saves the new name for the AIP bag in case it was altered by this function so the script can continue acting on
     # the bag. If UGA naming conventions are followed, it will almost always be the same as aip_bag_name.
-    new_bag_name, log_text = update_characters(aip_bag_path)
+    new_bag_path, log_text = update_characters(aip_bag_path, aip_bag_name)
     log_row.append(log_text)
 
     # Validates the bag in case there was a problem converting it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
     # TODO: test this part of the code. Have only tested validate at the start.
     try:
-        aip_bagit_object = bagit.Bag(aip_bag_path)
+        aip_bagit_object = bagit.Bag(new_bag_path)
         aip_bagit_object.validate()
     except bagit.BagValidationError as errors:
         log_row.extend(["n/a", f"The updated bag is not valid: {errors}", "Not converted"])
         log_writer.writerow(log_row)
-        move_error("updated_bag_not_valid", os.path.join("aptrust-aips", new_bag_name), new_bag_name)
+        move_error("updated_bag_not_valid", os.path.join("aptrust-aips", new_bag_path), new_bag_path)
         aips_errors += 1
         exit()
 
     # Tars the bag. The tar file is saved to a folder named "aptrust-aips" within the AIPs directory.
-    tar_bag(new_bag_name)
+    tar_bag(new_bag_path)
 
     # Updates the log for the successfully converted AIP.
     log_row.extend(["No errors detected.", "Conversion completed"])
