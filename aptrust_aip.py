@@ -75,7 +75,7 @@ def size_check(aip_path):
             bag_size += float(payload)
 
     # Evaluates if the size is below the 5 TB limit and return the result (True or False).
-    return bag_size < 5000000000
+    return bag_size < 5000000000000
 
 
 def length_check(aip_path, aip_name):
@@ -90,18 +90,18 @@ def length_check(aip_path, aip_name):
     # Checks the length of the AIP (top level folder).
     # If it is too long or 0, adds it to the wrong_length list.
     # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip_name) > 40 or len(aip_name) == 0:
+    if len(aip_name) > 255 or len(aip_name) == 0:
         wrong_length.append((aip_path, aip_name, len(aip_name)))
 
     # Checks the length of every directory and file.
     # If any name is too long or 0, adds it to the wrong_length list.
     for root, directories, files in os.walk(aip_path):
         for directory in directories:
-            if len(directory) > 155 or len(directory) == 0:
+            if len(directory) > 255 or len(directory) == 0:
                 path = os.path.join(root, directory)
                 wrong_length.append((path, directory, len(directory)))
         for file in files:
-            if len(file) > 155 or len(file) == 0:
+            if len(file) > 255 or len(file) == 0:
                 path = os.path.join(root, file)
                 wrong_length.append((path, file, len(file)))
 
@@ -111,7 +111,7 @@ def length_check(aip_path, aip_name):
         with open("character_limit_errors.csv", "a", newline='') as result:
             writer = csv.writer(result)
             # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
-            if os.path.getsize("character_limit_error.csv") == 0:
+            if os.path.getsize("character_limit_errors.csv") == 0:
                 writer.writerow(["Path", "Name", "Length of Name"])
             for name in wrong_length:
                 writer.writerow([name[0], name[1], name[2]])
