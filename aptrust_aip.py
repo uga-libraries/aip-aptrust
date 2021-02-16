@@ -314,7 +314,7 @@ aips_errors = 0
 script_start = datetime.datetime.today()
 
 # Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
-# TODO: accommodate more than one batch in a day. Separate log? Append to existing log?
+# TODO: accommodate more than one batch in a day. Unique names for log? Append to existing log?
 log = open(f"AIP_Conversion_Log_{script_start.date()}.csv", "w", newline="")
 log_writer = csv.writer(log)
 log_writer.writerow(["AIP", "Renaming", "Errors", "Conversion Result"])
