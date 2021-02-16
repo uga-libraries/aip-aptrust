@@ -45,7 +45,8 @@ def unpack(aip_zip):
         # Calculates the name of the tar file by removing the .bz2 extension, if present, to be able to extract.
         aip_tar = aip_zip.replace(".bz2", "")
         aip_tar_path = os.path.join(aips_directory, aip_tar)
-        subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}', stdout=subprocess.DEVNULL, shell=True)
+        subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}',
+                       stdout=subprocess.DEVNULL, shell=True)
 
     # For Mac and Linux, use tar to extract the AIP's bag directory.
     # This command works if the AIP is tarred and zipped or if it is just tarred.
@@ -290,13 +291,19 @@ def tar_bag(aip):
         subprocess.run(f'tar -cf {aip}.tar "{aip}"', shell=True)
 
 
-# Gets the directory from the script argument and makes that the current directory.
-# If it is missing or is not a valid directory, prints an error and quits the script.
+# Gets the directory from the script argument. If it is missing, prints an error and quits the script.
 try:
     aips_directory = sys.argv[1]
+except IndexError:
+    print("Missing the AIPs directory, which is a required script argument.")
+    print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
+    exit()
+
+# Makes the AIPs directory the current directory. If it is not a valid directory, prints an error and quits the script.
+try:
     os.chdir(aips_directory)
-except (IndexError, FileNotFoundError, NotADirectoryError):
-    print("The AIPs directory is either missing or not a valid directory:", aips_directory)
+except (FileNotFoundError, NotADirectoryError):
+    print("The provided AIPs directory is not a valid directory:", aips_directory)
     print("Script usage: python /path/aptrust_aip.py /path/aips_directory")
     exit()
 
@@ -307,6 +314,7 @@ aips_errors = 0
 script_start = datetime.datetime.today()
 
 # Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
+# TODO: accommodate more than one batch in a day. Separate log? Append to existing log?
 log = open(f"AIP_Conversion_Log_{script_start.date()}.csv", "w", newline="")
 log_writer = csv.writer(log)
 log_writer.writerow(["AIP", "Renaming", "Errors", "Conversion Result"])
