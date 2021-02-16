@@ -77,7 +77,7 @@ def size_check(aip_path):
     return bag_size < 5000000000000
 
 
-def length_check(aip_path):
+def length_check(aip_path, aip_name):
     """Tests if the file and directory name lengths are at least one character but no longer than 255 characters.
     Returns True if all names are within the limits or False if any names are outside the limit. Also creates a
     document with any names that are outside the limit for staff review. """
@@ -88,8 +88,8 @@ def length_check(aip_path):
     # Checks the length of the AIP (top level folder).
     # If it is too long or 0, adds it and its length to the wrong_length list.
     # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip_path) > 255 or len(aip_path) == 0:
-        wrong_length.append((aip_path, len(aip_path)))
+    if len(aip_name) > 255 or len(aip_name) == 0:
+        wrong_length.append((aip_path, aip_name, len(aip_name)))
 
     # Checks the length of every directory and file.
     # If any name is too long or 0, adds its full path and its length to the wrong_length list.
@@ -97,22 +97,22 @@ def length_check(aip_path):
         for directory in directories:
             if len(directory) > 255 or len(directory) == 0:
                 path = os.path.join(root, directory)
-                wrong_length.append((path, len(directory)))
+                wrong_length.append((path, directory, len(directory)))
         for file in files:
             if len(file) > 255 or len(file) == 0:
                 path = os.path.join(root, file)
-                wrong_length.append((path, len(file)))
+                wrong_length.append((path, file, len(file)))
 
     # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
     # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
     if len(wrong_length) > 0:
-        with open("character_limit_error.csv", "a", newline='') as result:
+        with open("character_limit_errors.csv", "a", newline='') as result:
             writer = csv.writer(result)
             # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
             if os.path.getsize("character_limit_error.csv") == 0:
-                writer.writerow(["Path", "Length of Name"])
+                writer.writerow(["Path", "Name", "Length of Name"])
             for name in wrong_length:
-                writer.writerow([name[0], name[1]])
+                writer.writerow([name[0], name[1], name[2]])
         return False
     else:
         return True
@@ -375,7 +375,7 @@ for item in os.listdir():
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
-    length_ok = length_check(aip_bag_path)
+    length_ok = length_check(aip_bag_path, aip_bag_name)
     if not length_ok:
         log_row.extend(["n/a", "At least one name is outside the character limit.", "Not converted"])
         log_writer.writerow(log_row)
