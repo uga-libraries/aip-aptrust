@@ -55,7 +55,7 @@ def unpack(aip_zip):
 
     # For Mac and Linux, use tar to extract the AIP's bag directory.
     # This command works if the AIP is tarred and zipped or if it is just tarred.
-    # TODO: indicate destination directory for the unpacked bag
+    # TODO: MAC indicate destination directory for the unpacked bag
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
@@ -222,7 +222,6 @@ def update_characters(aip_path, aip_name):
 
         # If any impermissible characters are present in the name, replaces them with underscores.
         # Not permitted: newline, carriage return, tab, vertical tab, and ascii bells.
-        # TODO: verify this works when there are multiple instances of the same character in a name.
         not_permitted = ["\n", "\r", "\t", "\v", "\a"]
         for character in not_permitted:
             if character in new_name:
@@ -268,9 +267,9 @@ def update_characters(aip_path, aip_name):
     bag = bagit.Bag(new_aip_path)
     bag.save(manifests=True)
 
-    # If any names were changed, saves them to a CSV in the AIPs directory as a record of actions taken on that AIP. If
-    # the AIP name was changed, the file and directory paths in the CSV will have the old name since the AIP name is
-    # changed last.
+    # If any names were changed, saves them to a CSV in the AIPs directory as a record of actions taken on that AIP.
+    # If the AIP name was changed, the file and directory paths in the CSV will have the original name, since the AIP is
+    # changed last, and the rename log is named with the original name as well.
     # TODO: should this save to the old or new aip name if the aip name changes? Right now it is the old one.
     if len(changed_names) > 0:
         with open(f"{aip_name}_rename_log.csv", "a", newline='') as result:
@@ -303,7 +302,7 @@ def tar_bag(aip_path):
     if operating_system == "Windows":
         subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
-        # TODO: confirm this saves in the pre-existing aptrust-aips directory.
+        # TODO: MAC confirm this saves in the pre-existing aptrust-aips directory.
         subprocess.run(f'tar -cf {aip_path}.tar "{aip_path}"', shell=True)
 
 
@@ -329,11 +328,14 @@ aips_transformed = 0
 aips_errors = 0
 script_start = datetime.datetime.today()
 
-# Creates a CSV file in the AIPs directory for logging the script progress, including a header row.
-# TODO: accommodate more than one batch in a day. Unique names for log? Append to existing log?
-log = open(f"AIP_Transformation_Log_{script_start.date()}.csv", "w", newline="")
+# Creates a CSV file in the AIPs directory for logging the script progress, if there is not one for this day already.
+log = open(f"AIP_Transformation_Log_{script_start.date()}.csv", "a", newline="")
 log_writer = csv.writer(log)
-log_writer.writerow(["AIP", "Renaming", "Errors", "Transformation Result"])
+
+# If this is a new log (the first batch run on this day), adds a header row.
+log_path = os.path.join(aips_directory, f"AIP_Transformation_Log_{script_start.date()}.csv")
+if os.path.getsize(log_path) == 0:
+    log_writer.writerow(["AIP", "Renaming", "Errors", "Transformation Result"])
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
@@ -410,7 +412,7 @@ for item in os.listdir():
         aips_errors += 1
         continue
     except ValueError as error:
-        # TODO: double check it should be error.args[0] instead of error.args
+        print("args:", error.args, type(error.args))
         log_row.extend(["n/a", f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
         log_writer.writerow(log_row)
         move_error("incomplete_preservationxml", aip_bag_path, aip_bag_name)
