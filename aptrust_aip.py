@@ -100,18 +100,18 @@ def length_check(aip_path, aip_name):
     # Checks the length of the AIP (top level folder).
     # If it is too long or 0, adds it to the wrong_length list.
     # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip_name) > 30 or len(aip_name) == 0:
+    if len(aip_name) > 255 or len(aip_name) == 0:
         wrong_length.append([aip_path, aip_name, len(aip_name)])
 
     # Checks the length of every directory and file.
     # If any name is too long or 0, adds it to the wrong_length list.
     for root, directories, files in os.walk(aip_path):
         for directory in directories:
-            if len(directory) > 155 or len(directory) == 0:
+            if len(directory) > 255 or len(directory) == 0:
                 path = os.path.join(root, directory)
                 wrong_length.append([path, directory, len(directory)])
         for file in files:
-            if len(file) > 155 or len(file) == 0:
+            if len(file) > 255 or len(file) == 0:
                 path = os.path.join(root, file)
                 wrong_length.append([path, file, len(file)])
 
