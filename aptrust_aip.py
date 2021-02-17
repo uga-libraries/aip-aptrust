@@ -32,15 +32,19 @@ def unpack(aip_zip):
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
 
+    # Determines if this AIP has a .tar.bz2 version or if it is just tar.
+    if aip_zip.endswith(".bz2"):
+        bzip = True
+    else:
+        bzip = False
+
     # For Windows, use 7-Zip to extract the files. If the AIP is both tarred and zipped, the command is run twice.
     if operating_system == "Windows":
 
         # Extracts the contents of the zip file, which is a tar file.
         # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
-        bzip = False
-        if aip_zip.endswith(".bz2"):
+        if bzip:
             subprocess.run(f'7z x {aip_zip}', stdout=subprocess.DEVNULL, shell=True)
-            bzip = True
 
         # Extracts the contents of the tar file, which is the AIP's bag directory.
         # Saves the bag to a folder within the AIPs directory named aptrust-aips.
@@ -49,16 +53,17 @@ def unpack(aip_zip):
         subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}',
                        stdout=subprocess.DEVNULL, shell=True)
 
-        # Deletes the tar file if there is also a zipped version of the AIP.
-        # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpackaged bags.
-        if bzip:
-            os.remove(aip_tar_path)
-
     # For Mac and Linux, use tar to extract the AIP's bag directory.
     # This command works if the AIP is tarred and zipped or if it is just tarred.
-    # TODO: indicate destination directory for the unpacked bag; delete tar if there is also a zip.
+    # TODO: indicate destination directory for the unpacked bag
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
+
+    # Deletes the tar file if there is also a zipped version of the AIP.
+    # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpacked bags.
+    # TODO: test on Mac
+    if bzip:
+        os.remove(os.path.join(aips_directory, aip_zip.replace(".bz2", "")))
 
 
 def size_check(aip_path):
