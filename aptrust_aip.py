@@ -450,5 +450,5 @@ for item in os.listdir():
 script_end = datetime.datetime.today()
 print(f"\nScript completed at {script_end}")
 print(f"Time to complete: {script_end - script_start}")
-print(f"{aips_transformed} AIPs were successfully transformed.")
-print(f"{aips_errors} AIPs had errors and could not be transformed.")
+print(f"{aips_transformed + aips_errors} AIPs were processed.")
+print(f"{aips_transformed} AIPs were successfully transformed and {aips_errors} AIPs had errors.")
