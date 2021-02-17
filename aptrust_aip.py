@@ -270,7 +270,6 @@ def update_characters(aip_path, aip_name):
     # If any names were changed, saves them to a CSV in the AIPs directory as a record of actions taken on that AIP.
     # If the AIP name was changed, the file and directory paths in the CSV will have the original name, since the AIP is
     # changed last, and the rename log is named with the original name as well.
-    # TODO: should this save to the old or new aip name if the aip name changes? Right now it is the old one.
     if len(changed_names) > 0:
         with open(f"{aip_name}_rename_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
