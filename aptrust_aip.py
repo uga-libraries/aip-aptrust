@@ -37,8 +37,10 @@ def unpack(aip_zip):
 
         # Extracts the contents of the zip file, which is a tar file.
         # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
+        bzip = False
         if aip_zip.endswith(".bz2"):
             subprocess.run(f'7z x {aip_zip}', stdout=subprocess.DEVNULL, shell=True)
+            bzip = True
 
         # Extracts the contents of the tar file, which is the AIP's bag directory.
         # Saves the bag to a folder within the AIPs directory named aptrust-aips.
@@ -47,11 +49,14 @@ def unpack(aip_zip):
         subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}',
                        stdout=subprocess.DEVNULL, shell=True)
 
-        # TODO: delete the tar if there is a zip of the same AIP to reset the AIPs directory back to the original files.
+        # Deletes the tar file if there is also a zipped version of the AIP.
+        # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpackaged bags.
+        if bzip:
+            os.remove(aip_tar_path)
 
     # For Mac and Linux, use tar to extract the AIP's bag directory.
     # This command works if the AIP is tarred and zipped or if it is just tarred.
-    # TODO: indicate destination directory for the unpacked bag.
+    # TODO: indicate destination directory for the unpacked bag; delete tar if there is also a zip.
     else:
         subprocess.run(f"tar -xf {aip_zip}", shell=True)
 
