@@ -83,27 +83,27 @@ def length_check(aip_path, aip_name):
     Returns True if all names are within the limits or False if any names are outside the limits. Also creates a
     document with any names that are outside the limits for staff review. """
 
-    # Makes a list to store tuples with the path, name, and number of characters for any name outside the limits.
-    # TODO: if this is a list, would make it faster to add to the csv.
+    # Makes a list to store lists with the path, name, and number of characters for each name outside the limits.
+    # Each name's list will become a row in the character_limit_errors.csv.
     wrong_length = []
 
     # Checks the length of the AIP (top level folder).
     # If it is too long or 0, adds it to the wrong_length list.
     # Checking the AIP instead of root because everything in root except the AIP is also included in directories.
-    if len(aip_name) > 255 or len(aip_name) == 0:
-        wrong_length.append((aip_path, aip_name, len(aip_name)))
+    if len(aip_name) > 30 or len(aip_name) == 0:
+        wrong_length.append([aip_path, aip_name, len(aip_name)])
 
     # Checks the length of every directory and file.
     # If any name is too long or 0, adds it to the wrong_length list.
     for root, directories, files in os.walk(aip_path):
         for directory in directories:
-            if len(directory) > 255 or len(directory) == 0:
+            if len(directory) > 155 or len(directory) == 0:
                 path = os.path.join(root, directory)
-                wrong_length.append((path, directory, len(directory)))
+                wrong_length.append([path, directory, len(directory)])
         for file in files:
-            if len(file) > 255 or len(file) == 0:
+            if len(file) > 155 or len(file) == 0:
                 path = os.path.join(root, file)
-                wrong_length.append((path, file, len(file)))
+                wrong_length.append([path, file, len(file)])
 
     # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
     # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
@@ -113,8 +113,8 @@ def length_check(aip_path, aip_name):
             # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
             if os.path.getsize("character_limit_errors.csv") == 0:
                 writer.writerow(["Path", "Name", "Length of Name"])
-            for name in wrong_length:
-                writer.writerow([name[0], name[1], name[2]])
+            for name_list in wrong_length:
+                writer.writerow(name_list)
         return False
     else:
         return True
