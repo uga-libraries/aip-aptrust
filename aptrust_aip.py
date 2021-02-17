@@ -230,8 +230,8 @@ def update_characters(aip_path, aip_name):
                 os.replace(os.path.join("aptrust-aips", original), os.path.join("aptrust-aips", new_name))
 
         # For AIPs, return the updated path to the AIP bag so the script can continue to refer to the AIP.
-        # TODO: only return if not join_root, so just for AIPs. Otherwise, the join aptrust-aips is redundant.
-        return os.path.join("aptrust-aips", new_name)
+        if not join_root:
+            return os.path.join("aptrust-aips", new_name)
 
     # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
     # Values are added to this list within rename()
