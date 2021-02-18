@@ -138,13 +138,17 @@ def add_bag_metadata(aip_path, aip_name):
     # Namespaces that find() will use when navigating the preservation.xml.
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
 
-    # Reads the data from the preservation.xml.
+    # Reads the data from the AIP metadata file, which may be named aip-id_preservation.xml or aip-id_master.xml.
     # If the preservation.xml is not found, raises an error so the script can stop processing this AIP.
     try:
         tree = et.parse(f"{aip_path}/data/metadata/{aip_name.replace('_bag', '')}_preservation.xml")
         root = tree.getroot()
     except FileNotFoundError:
-        raise FileNotFoundError
+        try:
+            tree = et.parse(f"{aip_path}/data/metadata/{aip_name.replace('_bag', '')}_master.xml")
+            root = tree.getroot()
+        except FileNotFoundError:
+            raise FileNotFoundError
 
     # For the next three try/except blocks, et.ParseError is from not finding the expected field in the preservation.xml
     # and AttributeError is from trying to get text from the variable for the missing field, which has a value of None.
