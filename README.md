@@ -4,7 +4,7 @@ Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) to 
 
 ## Script Status
 
-* The script is tested on Windows 10 and partially tested on a Mac.
+* The script is tested on Windows 10 and Mac OS X.
 * AIPs made using this script have been successfully ingested into the APTrust demo.
 * Staff have not had an opportunity to provide feedback.
 
