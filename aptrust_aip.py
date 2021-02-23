@@ -32,18 +32,12 @@ def unpack(aip_zip):
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
 
-    # Determines if this AIP has a .tar.bz2 version or if it is just tar.
-    if aip_zip.endswith(".bz2"):
-        bzip = True
-    else:
-        bzip = False
-
     # For Windows, use 7-Zip to extract the files. If the AIP is both tarred and zipped, the command is run twice.
     if operating_system == "Windows":
 
         # Extracts the contents of the zip file, which is a tar file.
         # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
-        if bzip:
+        if aip_zip.endswith(".bz2"):
             subprocess.run(f'7z x {aip_zip}', stdout=subprocess.DEVNULL, shell=True)
 
         # Extracts the contents of the tar file, which is the AIP's bag directory.
@@ -53,17 +47,19 @@ def unpack(aip_zip):
         subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}',
                        stdout=subprocess.DEVNULL, shell=True)
 
+        # Deletes the tar file if there is also a zipped version of the AIP.
+        # This is only necessary for Windows, since in Mac/Linux the intermediate tar file is not saved separately.
+        # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpacked bags.
+        if aip_zip.endswith(".bz2"):
+            os.remove(os.path.join(aips_directory, aip_zip.replace(".bz2", "")))
+
     # For Mac and Linux, use tar to extract the AIP's bag directory.
     # This command works if the AIP is tarred and zipped or if it is just tarred.
-    # TODO: MAC indicate destination directory for the unpacked bag
+    # Makes the aptrust-aips directory to save the bag to, if it doesn't already exist, before extracting.
     else:
-        subprocess.run(f"tar -xf {aip_zip}", shell=True)
-
-    # Deletes the tar file if there is also a zipped version of the AIP.
-    # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpacked bags.
-    # TODO: test on Mac
-    if bzip:
-        os.remove(os.path.join(aips_directory, aip_zip.replace(".bz2", "")))
+        if not os.path.exists("aptrust-aips"):
+            os.makedirs("aptrust-aips")
+        subprocess.run(f"tar -xf {aip_zip} -C aptrust-aips", shell=True)
 
 
 def size_check(aip_path):
@@ -305,7 +301,6 @@ def tar_bag(aip_path):
     if operating_system == "Windows":
         subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
-        # TODO: MAC confirm this saves in the pre-existing aptrust-aips directory.
         subprocess.run(f'tar -cf {aip_path}.tar "{aip_path}"', shell=True)
 
 
@@ -415,7 +410,6 @@ for item in os.listdir():
         aips_errors += 1
         continue
     except ValueError as error:
-        print("args:", error.args, type(error.args))
         log_row.extend(["n/a", f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
         log_writer.writerow(log_row)
         move_error("incomplete_preservationxml", aip_bag_path, aip_bag_name)
