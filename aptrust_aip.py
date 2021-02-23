@@ -59,7 +59,7 @@ def unpack(aip_zip):
     else:
         if not os.path.exists("aptrust-aips"):
             os.makedirs("aptrust-aips")
-        subprocess.run(f"tar -xf {aip_zip} -C aptrust-aips", shell=True)
+        subprocess.run(f'tar -xf "{aip_zip}" -C aptrust-aips', shell=True)
 
 
 def size_check(aip_path):
@@ -301,7 +301,7 @@ def tar_bag(aip_path):
     if operating_system == "Windows":
         subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
-        subprocess.run(f'tar -cf {aip_path}.tar "{aip_path}"', shell=True)
+        subprocess.run(f'tar -cf "{aip_path}.tar" "{aip_path}"', shell=True)
 
 
 # Gets the directory from the script argument. If it is missing, prints an error and quits the script.
