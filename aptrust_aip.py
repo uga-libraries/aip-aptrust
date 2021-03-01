@@ -190,7 +190,6 @@ def add_bag_metadata(aip_path, aip_name):
     # Makes aptrust-info.txt.
     with open(f"{aip_path}/aptrust-info.txt", "w") as new_file:
         new_file.write(f"Title: {title}\n")
-        new_file.write("Description: TBD\n")
         new_file.write("Access: Institution\n")
         new_file.write("Storage-Option: Glacier-Deep-OR\n")
 
