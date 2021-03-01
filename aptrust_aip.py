@@ -239,9 +239,8 @@ def character_check(aip_path, aip_name):
                 name_errors.append(os.path.join(root, directory))
 
     # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
-    # TODO: this is one CSV per AIP. Still want that now it is an error?
+    # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
     # TODO: if stay one CSV per AIP, move to the error folder too?
-    # TODO: this can be a text file now that it is one name per row.
     if len(name_errors) > 0:
         with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
@@ -379,7 +378,6 @@ for item in os.listdir():
 
     # Validates the AIP against the APTrust character type requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if impermissible characters are found.
-    # TODO: now that renaming is an error, doesn't need a separate column in the log.
     characters_ok = character_check(aip_bag_path, aip_bag_name)
     if not characters_ok:
         log_writer.writerow([item, "Impermissible characters", "Incomplete"])
