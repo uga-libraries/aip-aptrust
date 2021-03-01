@@ -198,93 +198,62 @@ def add_bag_metadata(aip_path, aip_name):
     bag.save(manifests=True)
 
 
-def update_characters(aip_path, aip_name):
-    """Finds impermissible characters in file and directory names and replaces them with underscores. Names must not
-    start with a dash or contain any of 5 whitespace characters. """
+def character_check(aip_path, aip_name):
+    """Tests if there are any impermissible characters in file and directory names. Names must not start with a dash
+    or contain a newline, carriage return, tab, vertical tab, or ascii bell. Returns True if all name characters are
+    permitted or False if not. Also creates a document with any names that include impermissible characters for staff
+    review. """
 
-    def rename(original, join_root=True):
-        """Renames the original file or directory by replacing any starting dashes or impermissible characters with
-        an underscore. If the name is changed, it is added to the changed_names list.
+    def name_check(name):
+        """Tests if a single file or directory name includes any impermissible characters. Returns True or False. """
 
-        The new bag path, which is the aptrust-folder where bags are stored plus the new name, is returned.
-        This is the the same as the original if there were no impermissible characters.
-        The returned new name is only saved and used for the AIP so the script can continue to act on the AIP even if
-        the name changes. """
+        # Checks if the name starts with a dash (not permitted).
+        if name.startswith("-"):
+            return False
 
-        # Variable with the original name that can be updated as needed.
-        new_name = original
-
-        # If the name starts with a dash, replaces that dash with an underscore by combining an underscore with
-        # everything except the first character of the name.
-        if new_name.startswith("-"):
-            new_name = "_" + new_name[1:]
-
-        # If any impermissible characters are present in the name, replaces them with underscores.
-        # Not permitted: newline, carriage return, tab, vertical tab, and ascii bells.
-        not_permitted = ["\n", "\r", "\t", "\v", "\a"]
+        # Checks if the name includes any characters that are not permitted.
+        not_permitted = ["\n", "\r", "\t", "\v", "\a", "+"]
         for character in not_permitted:
-            if character in new_name:
-                new_name = new_name.replace(character, "_")
+            if character in name:
+                return False
 
-        # If the new name is different from the original name, renames the file or directory to the new name.
-        # The default is to include the root as part of the path, but for AIPs (AIP is the root) just add aptrust-aips.
-        # Also saves the original and new name to a list of changed names to use for making a log of the changes.
-        if not original == new_name:
-            if join_root:
-                changed_names.append((os.path.join(root, original), os.path.join(root, new_name)))
-                os.replace(os.path.join(root, original), os.path.join(root, new_name))
-            else:
-                changed_names.append((os.path.join("aptrust-aips", original), os.path.join("aptrust-aips", new_name)))
-                os.replace(os.path.join("aptrust-aips", original), os.path.join("aptrust-aips", new_name))
+        # If neither of the previous code blocks returned False, then all characters in the name are permitted.
+        return True
 
-        # For AIPs, return the updated path to the AIP bag so the script can continue to refer to the AIP.
-        if not join_root:
-            return os.path.join("aptrust-aips", new_name)
+    # Makes a list for file or directory names, including their full path, that contain impermissible characters.
+    name_errors = []
 
-    # Makes a list of tuples with the original and updated name so that they can be saved to a CSV later.
-    # Values are added to this list within rename()
-    changed_names = []
+    # Checks the AIP name and adds it to the name_errors list if there are impermissible characters.
+    # Checking the AIP instead of root because everything in root except the AIP is checked as part of directories.
+    if name_check(aip_name) is False:
+        name_errors.append(os.path.join("aptrust-aips", aip_name))
 
-    # Iterates through the directory, starting from the bottom, so that as directory names are changed it does not
-    # impact paths for directories that have not yet been tested.
-    for root, directories, files in os.walk(aip_path, topdown=False):
-
-        # Updates any file name that starts with a dash or contains impermissible characters.
+    # Checks every directory and file name in the AIP. If there are impermissible characters, calculates the full
+    # path for that directory or file and adds it to the name_errors list .
+    for root, directories, files in os.walk(aip_path):
         for file in files:
-            rename(file)
-
-        # Updates any directory name that starts with a dash or contains impermissible characters.
+            if name_check(file) is False:
+                name_errors.append(os.path.join(root, file))
         for directory in directories:
-            rename(directory)
+            if name_check(directory) is False:
+                name_errors.append(os.path.join(root, directory))
 
-    # Updates the AIP name if it starts with a dash or contains impermissible characters.
-    # Checking the AIP instead of root because everything in root except the AIP was updated as part of directories.
-    new_aip_path = rename(aip_name, join_root=False)
-
-    # Updates the bag manifests with the new names so it continues to be valid.
-    # Note: bagit prints to the terminal that each renamed thing is not in the manifest, but the resulting bag is valid.
-    bag = bagit.Bag(new_aip_path)
-    bag.save(manifests=True)
-
-    # If any names were changed, saves them to a CSV in the AIPs directory as a record of actions taken on that AIP.
-    # If the AIP name was changed, the file and directory paths in the CSV will have the original name, since the AIP is
-    # changed last, and the rename log is named with the original name as well.
-    if len(changed_names) > 0:
-        with open(f"{aip_name}_rename_log.csv", "a", newline='') as result:
+    # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
+    # TODO: this is one CSV per AIP. Still want that now it is an error?
+    # TODO: if stay one CSV per AIP, move to the error folder too?
+    # TODO: this can be a text file now that it is one name per row.
+    if len(name_errors) > 0:
+        with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
-            writer.writerow(["Original Name", "Updated Name"])
-            for name in changed_names:
-                writer.writerow([name[0], name[1]])
+            writer.writerow(["Name with Impermissible Characters"])
+            for name_path in name_errors:
+                writer.writerow([name_path])
 
-    # Creates a variable with a message for the log (if any names were changed or not).
-    if len(changed_names) == 0:
-        log_message = "n/a"
+    # Returns True if all characters are permitted and False if impermissible characters were found.
+    if len(name_errors) == 0:
+        return True
     else:
-        log_message = "Yes"
-
-    # Returns the new_aip_path, so the rest of the script can still refer to the bag, and the log message.
-    # In the vast majority of cases, new_aip_path is identical to the original AIP path.
-    return new_aip_path, log_message
+        return False
 
 
 def tar_bag(aip_path):
@@ -415,27 +384,31 @@ for item in os.listdir():
         aips_errors += 1
         continue
 
-    # Checks the AIP for impermissible characters and replaces them with underscores.
-    # Produces a list of changed names for the AIP's preservation record.
-    # Saves the new path for the AIP bag in case it was altered by this function so the script can continue acting on
-    # the bag. It will almost always be the same as aip_bag_path.
-    new_bag_path, log_text = update_characters(aip_bag_path, aip_bag_name)
-    log_row.append(log_text)
+    # Validates the AIP against the APTrust character type requirements for directories and files.
+    # Produces a list for staff review and stops processing this AIP if impermissible characters are found.
+    # TODO: now that renaming is an error, doesn't need a separate column in the log.
+    characters_ok = character_check(aip_bag_path, aip_bag_name)
+    if not characters_ok:
+        log_row.extend(["n/a", "Impermissible characters", "Incomplete"])
+        log_writer.writerow(log_row)
+        move_error("impermissible_characters", aip_bag_path, aip_bag_name)
+        aips_errors +=1
+        continue
 
     # Validates the bag in case there was a problem transforming it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
     try:
-        aip_bagit_object = bagit.Bag(new_bag_path)
+        aip_bagit_object = bagit.Bag(aip_bag_path)
         aip_bagit_object.validate()
     except bagit.BagValidationError as errors:
         log_row.extend(["n/a", f"The transformed bag is not valid: {errors}", "Incomplete"])
         log_writer.writerow(log_row)
-        move_error("transformed_bag_not_valid", new_bag_path, new_bag_path[13:])
+        move_error("transformed_bag_not_valid", aip_bag_path, aip_bag_name)
         aips_errors += 1
         exit()
 
     # Tars the bag. The tar file is saved to the same folder as the bag (aptrust-aips) within the AIPs directory.
-    tar_bag(new_bag_path)
+    tar_bag(aip_bag_path)
 
     # Updates the log for the successfully transformed AIP.
     log_row.extend(["n/a", "Complete"])
