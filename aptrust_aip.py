@@ -348,7 +348,7 @@ for item in os.listdir():
     size_ok = size_check(aip_bag_path)
     if not size_ok:
         log_writer.writerow([item, "Above the 5TB limit", "Incomplete"])
-        move_error("bag_too_big", aip_bag_path, aip_bag_name)
+        move_error("bag_size_limit", aip_bag_path, aip_bag_name)
         aips_errors += 1
         continue
 
@@ -357,10 +357,10 @@ for item in os.listdir():
     # the list is moved to the error folder, along with the bag, once the error folder is made.
     length_ok = length_check(aip_bag_path, aip_bag_name)
     if not length_ok:
-        log_writer.writerow(["n/a", "Name(s) outside the character limit", "Incomplete"])
-        move_error("name_length", aip_bag_path, aip_bag_name)
+        log_writer.writerow([item, "Name(s) outside the character limit", "Incomplete"])
+        move_error("character_limit", aip_bag_path, aip_bag_name)
         log_name = f"{aip_bag_name}_character_limit_log.csv"
-        os.replace(log_name, os.path.join("errors", "name_length", log_name))
+        os.replace(log_name, os.path.join("errors", "character_limit", log_name))
         aips_errors += 1
         continue
 
