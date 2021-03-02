@@ -172,18 +172,16 @@ def character_check(aip_path, aip_name):
     # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
     # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
     # This is saved in the AIPs directory but is moved to the error folder with the bag once the error folder is made.
+    # Also False if impermissible characters were found or True if all characters are permitted.
     if len(name_errors) > 0:
         with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
             writer.writerow(["Name with Impermissible Characters"])
             for name_path in name_errors:
                 writer.writerow([name_path])
-
-    # Returns True if all characters are permitted and False if impermissible characters were found.
-    if len(name_errors) == 0:
-        return True
-    else:
         return False
+    else:
+        return True
 
 
 def add_bag_metadata(aip_path, aip_name):
