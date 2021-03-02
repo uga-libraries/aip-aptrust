@@ -202,7 +202,10 @@ def character_check(aip_path, aip_name):
     """Tests if there are any impermissible characters in file and directory names. Names must not start with a dash
     or contain a newline, carriage return, tab, vertical tab, or ascii bell. Returns True if all name characters are
     permitted or False if not. Also creates a document with any names that include impermissible characters for staff
-    review. """
+    review.
+
+    Future development idea: if this happens enough, could add which character(s) were found. Right now, just returns
+    False as soon as the first impermissible character is found."""
 
     def name_check(name):
         """Tests if a single file or directory name includes any impermissible characters. Returns True or False. """
@@ -212,7 +215,7 @@ def character_check(aip_path, aip_name):
             return False
 
         # Checks if the name includes any characters that are not permitted.
-        not_permitted = ["\n", "\r", "\t", "\v", "\a", "+"]
+        not_permitted = ["\n", "\r", "\t", "\v", "\a"]
         for character in not_permitted:
             if character in name:
                 return False
@@ -240,7 +243,7 @@ def character_check(aip_path, aip_name):
 
     # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
     # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
-    # TODO: if stay one CSV per AIP, move to the error folder too?
+    # This is saved in the AIPs directory but is moved to the error folder with the bag once the error folder is made.
     if len(name_errors) > 0:
         with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
@@ -378,10 +381,13 @@ for item in os.listdir():
 
     # Validates the AIP against the APTrust character type requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if impermissible characters are found.
+    # The list is moved to the error folder, along with the bag, once the error folder is made.
     characters_ok = character_check(aip_bag_path, aip_bag_name)
     if not characters_ok:
         log_writer.writerow([item, "Impermissible characters", "Incomplete"])
         move_error("impermissible_characters", aip_bag_path, aip_bag_name)
+        log_name = f"{aip_bag_name}_impermissible_characters_log.csv"
+        os.replace(log_name, os.path.join("errors", "impermissible_characters", log_name))
         aips_errors += 1
         continue
 
