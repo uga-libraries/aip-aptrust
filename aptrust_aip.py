@@ -111,14 +111,13 @@ def length_check(aip_path, aip_name):
                 path = os.path.join(root, file)
                 wrong_length.append([path, file, len(file)])
 
-    # If any names were too long or 0, saves each of those names to a file for staff review and returns False so the
-    # script stops processing this AIP. Otherwise, returns True so the next step can start on this AIP.
+    # If any names were too long or 0, saves them to a CSV in the AIPs directory for staff review.
+    # The CSV is moved to the error folder with the bag once the error folder is made.
+    # Also returns False if any names were the incorrect length or True if all lengths were correct.
     if len(wrong_length) > 0:
-        with open("character_limit_errors.csv", "a", newline='') as result:
+        with open(f"{aip_name}_character_limit_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
-            # Adds a header if the CSV is empty, meaning this is the first AIP with names with incorrect lengths.
-            if os.path.getsize("character_limit_errors.csv") == 0:
-                writer.writerow(["Path", "Name", "Length of Name"])
+            writer.writerow(["Path", "Name", "Length of Name"])
             for name_list in wrong_length:
                 writer.writerow(name_list)
         return False
@@ -172,7 +171,7 @@ def character_check(aip_path, aip_name):
     # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
     # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
     # This is saved in the AIPs directory but is moved to the error folder with the bag once the error folder is made.
-    # Also False if impermissible characters were found or True if all characters are permitted.
+    # Also returns False if impermissible characters were found or True if all characters are permitted.
     if len(name_errors) > 0:
         with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
             writer = csv.writer(result)
@@ -355,10 +354,13 @@ for item in os.listdir():
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
+    # the list is moved to the error folder, along with the bag, once the error folder is made.
     length_ok = length_check(aip_bag_path, aip_bag_name)
     if not length_ok:
         log_writer.writerow(["n/a", "Name(s) outside the character limit", "Incomplete"])
         move_error("name_length", aip_bag_path, aip_bag_name)
+        log_name = f"{aip_bag_name}_character_limit_log.csv"
+        os.replace(log_name, os.path.join("errors", "name_length", log_name))
         aips_errors += 1
         continue
 
