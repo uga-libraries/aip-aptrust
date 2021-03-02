@@ -126,6 +126,66 @@ def length_check(aip_path, aip_name):
         return True
 
 
+def character_check(aip_path, aip_name):
+    """Tests if there are any impermissible characters in file and directory names. Names must not start with a dash
+    or contain a newline, carriage return, tab, vertical tab, or ascii bell. Returns True if all name characters are
+    permitted or False if not. Also creates a document with any names that include impermissible characters for staff
+    review.
+
+    Future development idea: if this happens enough, could add which character(s) were found. Right now, just returns
+    False as soon as the first impermissible character is found."""
+
+    def name_check(name):
+        """Tests if a single file or directory name includes any impermissible characters. Returns True or False. """
+
+        # Checks if the name starts with a dash (not permitted).
+        if name.startswith("-"):
+            return False
+
+        # Checks if the name includes any characters that are not permitted.
+        not_permitted = ["\n", "\r", "\t", "\v", "\a"]
+        for character in not_permitted:
+            if character in name:
+                return False
+
+        # If neither of the previous code blocks returned False, then all characters in the name are permitted.
+        return True
+
+    # Makes a list for file or directory names, including their full path, that contain impermissible characters.
+    name_errors = []
+
+    # Checks the AIP name and adds it to the name_errors list if there are impermissible characters.
+    # Checking the AIP instead of root because everything in root except the AIP is checked as part of directories.
+    if name_check(aip_name) is False:
+        name_errors.append(os.path.join("aptrust-aips", aip_name))
+
+    # Checks every directory and file name in the AIP. If there are impermissible characters, calculates the full
+    # path for that directory or file and adds it to the name_errors list .
+    for root, directories, files in os.walk(aip_path):
+        for file in files:
+            if name_check(file) is False:
+                name_errors.append(os.path.join(root, file))
+        for directory in directories:
+            if name_check(directory) is False:
+                name_errors.append(os.path.join(root, directory))
+
+    # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
+    # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
+    # This is saved in the AIPs directory but is moved to the error folder with the bag once the error folder is made.
+    if len(name_errors) > 0:
+        with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
+            writer = csv.writer(result)
+            writer.writerow(["Name with Impermissible Characters"])
+            for name_path in name_errors:
+                writer.writerow([name_path])
+
+    # Returns True if all characters are permitted and False if impermissible characters were found.
+    if len(name_errors) == 0:
+        return True
+    else:
+        return False
+
+
 def add_bag_metadata(aip_path, aip_name):
     """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt to the bag metadata. The values
     for the metadata fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file
@@ -196,66 +256,6 @@ def add_bag_metadata(aip_path, aip_name):
     # Saves the bag, which updates the tag manifests with the new file aptrust-info.txt and the new checksums for the
     # edited file bagit-info.txt so the bag remains valid.
     bag.save(manifests=True)
-
-
-def character_check(aip_path, aip_name):
-    """Tests if there are any impermissible characters in file and directory names. Names must not start with a dash
-    or contain a newline, carriage return, tab, vertical tab, or ascii bell. Returns True if all name characters are
-    permitted or False if not. Also creates a document with any names that include impermissible characters for staff
-    review.
-
-    Future development idea: if this happens enough, could add which character(s) were found. Right now, just returns
-    False as soon as the first impermissible character is found."""
-
-    def name_check(name):
-        """Tests if a single file or directory name includes any impermissible characters. Returns True or False. """
-
-        # Checks if the name starts with a dash (not permitted).
-        if name.startswith("-"):
-            return False
-
-        # Checks if the name includes any characters that are not permitted.
-        not_permitted = ["\n", "\r", "\t", "\v", "\a"]
-        for character in not_permitted:
-            if character in name:
-                return False
-
-        # If neither of the previous code blocks returned False, then all characters in the name are permitted.
-        return True
-
-    # Makes a list for file or directory names, including their full path, that contain impermissible characters.
-    name_errors = []
-
-    # Checks the AIP name and adds it to the name_errors list if there are impermissible characters.
-    # Checking the AIP instead of root because everything in root except the AIP is checked as part of directories.
-    if name_check(aip_name) is False:
-        name_errors.append(os.path.join("aptrust-aips", aip_name))
-
-    # Checks every directory and file name in the AIP. If there are impermissible characters, calculates the full
-    # path for that directory or file and adds it to the name_errors list .
-    for root, directories, files in os.walk(aip_path):
-        for file in files:
-            if name_check(file) is False:
-                name_errors.append(os.path.join(root, file))
-        for directory in directories:
-            if name_check(directory) is False:
-                name_errors.append(os.path.join(root, directory))
-
-    # If any names have impermissible characters, saves them to a CSV in the AIPs directory for staff review.
-    # Saves as a CSV even though there is only one column to make it faster to open in a spreadsheet for analysis.
-    # This is saved in the AIPs directory but is moved to the error folder with the bag once the error folder is made.
-    if len(name_errors) > 0:
-        with open(f"{aip_name}_impermissible_characters_log.csv", "a", newline='') as result:
-            writer = csv.writer(result)
-            writer.writerow(["Name with Impermissible Characters"])
-            for name_path in name_errors:
-                writer.writerow([name_path])
-
-    # Returns True if all characters are permitted and False if impermissible characters were found.
-    if len(name_errors) == 0:
-        return True
-    else:
-        return False
 
 
 def tar_bag(aip_path):
@@ -364,8 +364,19 @@ for item in os.listdir():
         aips_errors += 1
         continue
 
+    # Validates the AIP against the APTrust character requirements for directories and files.
+    # Produces a list for staff review and stops processing this AIP if any impermissible characters are found.
+    # The list is moved to the error folder, along with the bag, once the error folder is made.
+    characters_ok = character_check(aip_bag_path, aip_bag_name)
+    if not characters_ok:
+        log_writer.writerow([item, "Impermissible characters", "Incomplete"])
+        move_error("impermissible_characters", aip_bag_path, aip_bag_name)
+        log_name = f"{aip_bag_name}_impermissible_characters_log.csv"
+        os.replace(log_name, os.path.join("errors", "impermissible_characters", log_name))
+        aips_errors += 1
+        continue
+
     # Updates the bag metadata files to meet APTrust requirements.
-    # Does this step prior to renaming impermissible characters so that the path to the preservation.xml is not changed.
     try:
         add_bag_metadata(aip_bag_path, aip_bag_name)
     except FileNotFoundError:
@@ -376,18 +387,6 @@ for item in os.listdir():
     except ValueError as error:
         log_writer.writerow([item, f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
         move_error("incomplete_preservationxml", aip_bag_path, aip_bag_name)
-        aips_errors += 1
-        continue
-
-    # Validates the AIP against the APTrust character type requirements for directories and files.
-    # Produces a list for staff review and stops processing this AIP if impermissible characters are found.
-    # The list is moved to the error folder, along with the bag, once the error folder is made.
-    characters_ok = character_check(aip_bag_path, aip_bag_name)
-    if not characters_ok:
-        log_writer.writerow([item, "Impermissible characters", "Incomplete"])
-        move_error("impermissible_characters", aip_bag_path, aip_bag_name)
-        log_name = f"{aip_bag_name}_impermissible_characters_log.csv"
-        os.replace(log_name, os.path.join("errors", "impermissible_characters", log_name))
         aips_errors += 1
         continue
 
