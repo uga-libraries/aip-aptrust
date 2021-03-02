@@ -310,8 +310,7 @@ for item in os.listdir():
     if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
         continue
 
-    # Starts a list of information to be added to the log for this AIP.
-    # Saves the information to the log when a known error is encountered or transformation is complete.
+    # Prints script progress to show it is still working.
     print("Starting transformation of:", item)
 
     # Calculates the bag name (aip-id_bag) from the file name for referring to the AIP after it is untarred/unzipped.
