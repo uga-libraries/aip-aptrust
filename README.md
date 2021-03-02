@@ -2,12 +2,6 @@
 
 Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) to AIPs that can be ingested into APTrust to have geographically-distant storage. The AIPs are checked for if they meet APTrust requirements for maximum size and file/directory name length, additional bag metadata is added, and impermissible characters are replaced with underscores. The result of this script is tar files ready to ingest into APTrust.
 
-## Script Status
-
-* The script is tested on Windows 10 and Mac OS X.
-* AIPs made using this script have been successfully ingested into the APTrust demo.
-* Staff have not had an opportunity to provide feedback.
-
 ## Dependencies
 
 Install the bagit-python: pip install bagit
@@ -20,17 +14,16 @@ This is a batch workflow, which undertakes the following steps on each AIP in a 
 
 1. Unzips and untars the AIP, resulting in a bag, and validates the bag.
 
-2. Verifies the bag meets APTrust limits for size and name lengths.
+2. Verifies the bag meets APTrust limits.
    * The entire bag must be under 5 TB.
-   * No file or directory name can be 0 characters or exceed 255 characters, including the file extension.
+   * No file or directory name can be 0 characters or exceed 255 characters.
+   * No file or directory name can start with a dash or include a newline, carriage return, tab, vertical tab, or ascii bell. 
    
 3. Adds metadata fields to the bagit-info.txt file using default values or information from the preservation.xml file in the AIP.
 
 4. Adds a new file, aptrust-info.txt, to the bag metadata files. The aptrust-info.txt file uses default values or information from the preservation.xml file in the AIP.
 
-5. Replaces impermissible characters in file and directory names with underscores and creates a log of any name changes. Names may not start with a dash and may not contain any of five special whitespace characters.
-
-6. Validates and tars the bag.
+5. Validates and tars the bag.
 
 The script also creates a log (a CSV) with the name of each AIP, if any renaming is done, output from any anticipated errors that were encountered, and if the AIP was successfully transformed. Information for an AIP is saved to this log when an anticipated error is encountered or after transformation is complete.
 
@@ -44,6 +37,5 @@ The script also creates a log (a CSV) with the name of each AIP, if any renaming
 ### Explanation of fields used in aptrust-info.txt
 
 * **Title:** Title of the AIP in ARCHive
-* **Description:** TBD - we do not generally have AIP-level descriptions
 * **Access:** who can view AIP metadata in APTrust (Institution)
 * **Storage-Option:** storage type to use in APTrust (Glacier-Deep-OR)
