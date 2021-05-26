@@ -271,6 +271,14 @@ def tar_bag(aip_path):
         subprocess.run(f'tar -cf "{aip_path}.tar" "{aip_path}"', shell=True)
 
 
+def log(log_path, log_row):
+    """Adds a line to the script progress log."""
+
+    with open(log_path, "a", newline="") as log_file:
+        log_writer = csv.writer(log_file)
+        log_writer.writerow(log_row)
+
+
 # Gets the directory from the script argument. If it is missing, prints an error and quits the script.
 try:
     aips_directory = sys.argv[1]
@@ -293,14 +301,11 @@ aips_transformed = 0
 aips_errors = 0
 script_start = datetime.datetime.today()
 
-# Creates a CSV file in the AIPs directory for logging the script progress, if there is not one for this day already.
-log = open(f"AIP_Transformation_Log_{script_start.date()}.csv", "a", newline="")
-log_writer = csv.writer(log)
-
-# If this is a new log (the first batch run on this day), adds a header row.
-log_path = os.path.join(aips_directory, f"AIP_Transformation_Log_{script_start.date()}.csv")
-if os.path.getsize(log_path) == 0:
-    log_writer.writerow(["AIP", "Errors", "Transformation Result"])
+# Saves the log path to a variable, for use throughout the script.
+# If the log doesn't exist from earlier batches in the same day, adds a header row.
+log_path = f"AIP_Transformation_Log_{script_start.date()}.csv"
+if not os.path.exists(os.path.join(aips_directory, log_path)):
+    log(log_path, ["AIP", "Errors", "Transformation Result"])
 
 # Gets each AIP in the AIPs directory and transforms it into an APTrust-compatible AIP.
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
@@ -319,7 +324,7 @@ for item in os.listdir():
         regex = re.match("^(.*_bag).", item)
         aip_bag_name = regex.group(1)
     except AttributeError:
-        log_writer.writerow([item, "Bag name is not formatted aip-id_bag", "Incomplete"])
+        log(log_path, [item, "Bag name is not formatted aip-id_bag", "Incomplete"])
         move_error("bag_name", item, item)
         aips_errors += 1
         continue
@@ -337,7 +342,7 @@ for item in os.listdir():
         aip_bagit_object = bagit.Bag(aip_bag_path)
         aip_bagit_object.validate()
     except bagit.BagValidationError as errors:
-        log_writer.writerow([item, f"The unpacked bag is not valid: {errors}", "Incomplete"])
+        log(log_path, [item, f"The unpacked bag is not valid: {errors}", "Incomplete"])
         move_error("unpacked_bag_not_valid", aip_bag_path, aip_bag_name)
         aips_errors += 1
         continue
@@ -346,7 +351,7 @@ for item in os.listdir():
     # Stops processing this AIP if it is too big (above 5 TB).
     size_ok = size_check(aip_bag_path)
     if not size_ok:
-        log_writer.writerow([item, "Above the 5TB limit", "Incomplete"])
+        log(log_path, [item, "Above the 5TB limit", "Incomplete"])
         move_error("bag_size_limit", aip_bag_path, aip_bag_name)
         aips_errors += 1
         continue
@@ -356,7 +361,7 @@ for item in os.listdir():
     # the list is moved to the error folder, along with the bag, once the error folder is made.
     length_ok = length_check(aip_bag_path, aip_bag_name)
     if not length_ok:
-        log_writer.writerow([item, "Name(s) outside the character limit", "Incomplete"])
+        log(log_path, [item, "Name(s) outside the character limit", "Incomplete"])
         move_error("character_limit", aip_bag_path, aip_bag_name)
         log_name = f"{aip_bag_name}_character_limit_log.csv"
         os.replace(log_name, os.path.join("errors", "character_limit", log_name))
@@ -368,7 +373,7 @@ for item in os.listdir():
     # The list is moved to the error folder, along with the bag, once the error folder is made.
     characters_ok = character_check(aip_bag_path, aip_bag_name)
     if not characters_ok:
-        log_writer.writerow([item, "Impermissible characters", "Incomplete"])
+        log(log_path, [item, "Impermissible characters", "Incomplete"])
         move_error("impermissible_characters", aip_bag_path, aip_bag_name)
         log_name = f"{aip_bag_name}_impermissible_characters_log.csv"
         os.replace(log_name, os.path.join("errors", "impermissible_characters", log_name))
@@ -379,12 +384,12 @@ for item in os.listdir():
     try:
         add_bag_metadata(aip_bag_path, aip_bag_name)
     except FileNotFoundError:
-        log_writer.writerow([item, "The preservation.xml is missing.", "Incomplete"])
+        log(log_path, [item, "The preservation.xml is missing.", "Incomplete"])
         move_error("no_preservationxml", aip_bag_path, aip_bag_name)
         aips_errors += 1
         continue
     except ValueError as error:
-        log_writer.writerow([item, f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
+        log(log_path, [item, f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
         move_error("incomplete_preservationxml", aip_bag_path, aip_bag_name)
         aips_errors += 1
         continue
@@ -395,7 +400,7 @@ for item in os.listdir():
         aip_bagit_object = bagit.Bag(aip_bag_path)
         aip_bagit_object.validate()
     except bagit.BagValidationError as errors:
-        log_writer.writerow([item, f"The transformed bag is not valid: {errors}", "Incomplete"])
+        log(log_path, [item, f"The transformed bag is not valid: {errors}", "Incomplete"])
         move_error("transformed_bag_not_valid", aip_bag_path, aip_bag_name)
         aips_errors += 1
         exit()
@@ -404,7 +409,7 @@ for item in os.listdir():
     tar_bag(aip_bag_path)
 
     # Updates the log for the successfully transformed AIP.
-    log_writer.writerow([item, "n/a", "Complete"])
+    log(log_path, [item, "n/a", "Complete"])
     aips_transformed += 1
 
 # Prints summary information about the script's success.
