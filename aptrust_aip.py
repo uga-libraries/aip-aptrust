@@ -15,13 +15,13 @@ import sys
 import xml.etree.ElementTree as et
 
 
-def move_error(error_name, aip_path, aip_name):
+def move_error(error_name, aip_name):
     """Moves the AIP to an error folder, named with the error type, so it is clear what step the AIP stopped on.
     Makes the error folder if it does not already exist prior to moving the AIP. """
 
     if not os.path.exists(f"errors/{error_name}"):
         os.makedirs(f"errors/{error_name}")
-    os.replace(aip_path, f"errors/{error_name}/{aip_name}")
+    os.replace(aip_name, f"errors/{error_name}/{aip_name}")
 
 
 def unpack(aip_zip):
@@ -365,8 +365,8 @@ if not os.path.exists(os.path.join(aips_directory, log_path)):
 # Any AIP with an anticipated error is moved to a folder with the error name so processing can stop on that AIP.
 for item in os.listdir():
 
-    # Skip anything in the AIPs directory that isn't an AIP, such as the log, based on the file extension.
-    if not (item.endswith(".tar.bz2") or item.endswith(".tar")):
+    # Skip anything in the AIPs directory that isn't a bag, like the logs or zipped versions of the AIPs.
+    if not item.endswith("_bag"):
         continue
 
     # TODO: temporary list for time log info.
@@ -375,54 +375,43 @@ for item in os.listdir():
     # Prints script progress to show it is still working.
     print("Starting transformation of:", item)
 
-    # Calculates the bag name (aip-id_bag) from the file name for referring to the AIP after it is untarred/unzipped.
-    # Stops processing this AIP if the bag name does not match the expected pattern.
-    try:
-        regex = re.match("^(.*_bag).", item)
-        aip_bag_name = regex.group(1)
-    except AttributeError:
-        log(log_path, [item, "Bag name is not formatted aip-id_bag", "Incomplete"])
-        move_error("bag_name", item, item)
-        aips_errors += 1
-        continue
-
-    # Unpacks the AIP's bag directory from the zip and/or tar file.
-    # The original zip and/or tar file is retained in case the script needs to be run again.
-    # TODO: may much faster to batch untar/unzip via Explorer.
-    # unpack(item)
-    times.append('skipped')
-
-    # Variable that combines the aip_bag_name with the folder within the AIPs directory that it was saved to.
-    aip_bag_path = os.path.join("aptrust-aips", aip_bag_name)
-
     # Validates the unpacked bag in case there was a problem during storage or unpacking.
     # Stops processing this AIP if the bag is invalid.
     try:
-        aip_bagit_object = bagit.Bag(aip_bag_path)
+        # TODO: temporary start timestamp
+        start = datetime.datetime.now()
+        print("\tStart validation")
+        aip_bagit_object = bagit.Bag(item)
         aip_bagit_object.validate()
+        # TODO: temporary end timestamp
+        end = datetime.datetime.now()
+        times.append(str(end - start))
     except bagit.BagValidationError as errors:
         log(log_path, [item, f"The unpacked bag is not valid: {errors}", "Incomplete"])
-        move_error("unpacked_bag_not_valid", aip_bag_path, aip_bag_name)
+        move_error("unpacked_bag_not_valid", item)
         aips_errors += 1
+        # TODO: temporary end timestamp
+        end = datetime.datetime.now()
+        times.append(str(end - start))
         continue
 
     # Validates the AIP against the APTrust size requirement.
     # Stops processing this AIP if it is too big (above 5 TB).
-    size_ok = size_check(aip_bag_path)
+    size_ok = size_check(item)
     if not size_ok:
         log(log_path, [item, "Above the 5TB limit", "Incomplete"])
-        move_error("bag_size_limit", aip_bag_path, aip_bag_name)
+        move_error("bag_size_limit", item)
         aips_errors += 1
         continue
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
     # the list is moved to the error folder, along with the bag, once the error folder is made.
-    length_ok = length_check(aip_bag_path, aip_bag_name)
+    length_ok = length_check(item, item)
     if not length_ok:
         log(log_path, [item, "Name(s) outside the character limit", "Incomplete"])
-        move_error("character_limit", aip_bag_path, aip_bag_name)
-        log_name = f"{aip_bag_name}_character_limit_log.csv"
+        move_error("character_limit", item)
+        log_name = f"{item}_character_limit_log.csv"
         os.replace(log_name, os.path.join("errors", "character_limit", log_name))
         aips_errors += 1
         continue
@@ -430,44 +419,48 @@ for item in os.listdir():
     # Validates the AIP against the APTrust character requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if any impermissible characters are found.
     # The list is moved to the error folder, along with the bag, once the error folder is made.
-    characters_ok = character_check(aip_bag_path, aip_bag_name)
+    characters_ok = character_check(item, item)
     if not characters_ok:
         log(log_path, [item, "Impermissible characters", "Incomplete"])
-        move_error("impermissible_characters", aip_bag_path, aip_bag_name)
-        log_name = f"{aip_bag_name}_impermissible_characters_log.csv"
+        move_error("impermissible_characters", item)
+        log_name = f"{item}_impermissible_characters_log.csv"
         os.replace(log_name, os.path.join("errors", "impermissible_characters", log_name))
         aips_errors += 1
         continue
 
     # Updates the bag metadata files to meet APTrust requirements.
     try:
-        add_bag_metadata(aip_bag_path, aip_bag_name)
+        add_bag_metadata(item, item)
     except FileNotFoundError:
         log(log_path, [item, "The preservation.xml is missing.", "Incomplete"])
-        move_error("no_preservationxml", aip_bag_path, aip_bag_name)
+        move_error("no_preservationxml", item)
         aips_errors += 1
         continue
     except ValueError as error:
         log(log_path, [item, f"The preservation.xml is missing the {error.args[0]}", "Incomplete"])
-        move_error("incomplete_preservationxml", aip_bag_path, aip_bag_name)
+        move_error("incomplete_preservationxml", item)
         aips_errors += 1
         continue
 
     # Validates the bag in case there was a problem transforming it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
     try:
-        aip_bagit_object = bagit.Bag(aip_bag_path)
+        # TODO: temporary start timestamp
+        start = datetime.datetime.now()
+        print("\tStart validation")
+        aip_bagit_object = bagit.Bag(item)
         aip_bagit_object.validate()
+        # TODO: temporary end timestamp
+        end = datetime.datetime.now()
+        times.append(str(end - start))
     except bagit.BagValidationError as errors:
         log(log_path, [item, f"The transformed bag is not valid: {errors}", "Incomplete"])
-        move_error("transformed_bag_not_valid", aip_bag_path, aip_bag_name)
+        move_error("transformed_bag_not_valid", item)
         aips_errors += 1
+        # TODO: temporary end timestamp
+        end = datetime.datetime.now()
+        times.append(str(end - start))
         exit()
-
-    # Tars the bag. The tar file is saved to the same folder as the bag (aptrust-aips) within the AIPs directory.
-    # TODO: try running this from command line outside of Python
-    # tar_bag(aip_bag_path)
-    times.append("skipped")
 
     # Updates the log for the successfully transformed AIP.
     log(log_path, [item, "n/a", "Complete"])
