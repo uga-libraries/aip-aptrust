@@ -68,10 +68,11 @@ apt_validate, apt_upload, config_validate, credentials = validate_arguments(sys.
 # Start tracking counts for summarizing script results.
 total_aips = 0
 validation_errors = 0
+upload_errors = 0
 
 # Starts a log, if it doesn't already exist from uploading a previous batch of AIPs.
 if not os.path.exists("aptrust_upload_log.csv"):
-    log(["AIP", "Validation", "Validation Date", "Validation_Errors"])
+    log(["AIP", "Validation", "Validation Date", "Validation Errors", "Upload", "Upload Date", "Upload Errors"])
 
 # Validate each AIP and upload it to APTrust if it is valid.
 for item in os.listdir("."):
@@ -99,10 +100,19 @@ for item in os.listdir("."):
         continue
 
     # Run apt_load.
+    result = subprocess.run(f'{apt_upload} --config={credentials} --key="{item}" "{os.path.join(os.getcwd(), item)}"',
+                            capture_output=True, shell=True)
 
-    # Adds this AIP to the log.
+    # Adds this AIP to the log. If there was an error, updates the error counter.
+    if result.returncode == 0:
+        to_log.extend(["Upload Complete", datetime.datetime.today(), "n/a"])
+    else:
+        to_log.extend([f"Upload Error: {result.returncode}", datetime.datetime.today(),
+                       result.stdout.decode('UTF-8').replace("\n", "; ")])
+        upload_errors += 1
     log(to_log)
 
 # Print a summary of the script results.
 print(f"\nScript is complete, with {total_aips} AIPs processed.")
 print(validation_errors, "AIPs had validation errors.")
+print(upload_errors, "AIPs had upload errors.")
