@@ -225,7 +225,7 @@ def log(log_path, log_row):
 
 
 # Prints a message about the version of the script, in case the user meant to select the other branch.
-print('\nRunning the "no-zip" branch of the APTrust transformation script.')
+print('\nRunning the "no-zip" branch of the APTrust transformation script, used for AIPS over 20 GB.')
 print('All AIPs should be unzipped and untarred prior to running the script.')
 print('Bags must be tarred, using zipall.cmd, after running the script.\n')
 
