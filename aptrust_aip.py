@@ -408,7 +408,7 @@ for item in os.listdir():
         log(log_path, [item, f"The transformed bag is not valid: {errors}", "Incomplete"])
         move_error("transformed_bag_not_valid", aip_bag_path, aip_bag_name)
         aips_errors += 1
-        exit()
+        continue
 
     # Tars the bag. The tar file is saved to the same folder as the bag (aptrust-aips) within the AIPs directory.
     tar_bag(aip_bag_path)
