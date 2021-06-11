@@ -88,14 +88,14 @@ for item in os.listdir("."):
     result = subprocess.run(f'{apt_validate} --config={config_validate} "{os.path.join(os.getcwd(), item)}"',
                             capture_output=True, shell=True)
 
-    # If not valid, does not upload. Adds this AIP to the log, updates the error counter, and starts on the next AIP.
-    if not result.returncode == 0:
+    # If the AIP is valid, starts a list to be used for the log once the upload result is obtained.
+    # Otherwise, does not upload. Adds this AIP to the log, updates the error counter, and starts on the next AIP.
+    if result.returncode == 0:
+        to_log = [item, "Valid", datetime.datetime.today(), "n/a"]
+    else:
         log([item, "Not Valid", datetime.datetime.today(), result.stdout.decode('UTF-8').replace("\n", "; ")])
         validation_errors += 1
         continue
-
-    # Adds results to list which be used for the log, once the upload result is obtained.
-    to_log = [item, "Valid", datetime.datetime.today(), "n/a"]
 
     # Run apt_load.
 
