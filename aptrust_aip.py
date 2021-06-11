@@ -279,6 +279,11 @@ def log(log_path, log_row):
         log_writer.writerow(log_row)
 
 
+# Prints a message about the version of the script, in case the user meant to select the other branch.
+print('\nRunning the main branch of the APTrust transformation script, used for AIPS under 20 GB.')
+print('AIPs will be unzipped and tarred as part of the script, which becomes too slow for anything over 20 GB.')
+print('For larger AIPs, use the "no-zip" branch of the script instead.\n')
+
 # Gets the directory from the script argument. If it is missing, prints an error and quits the script.
 try:
     aips_directory = sys.argv[1]
