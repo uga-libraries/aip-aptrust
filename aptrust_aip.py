@@ -1,6 +1,8 @@
 # For pilot collaboration on digital preservation storage with Emory.
 # Batch transforms AIPs from ARCHive into AIPs compatible with APTrust.
-# Prior to running this script, export the AIPs from ARCHive and save to a folder (AIPs directory).
+
+# Prior to running this script, export the AIPs from ARCHive, save to a folder (AIPs directory), and unzip.
+# After running this script, use zipall.cmd to tar the transformed bags.
 
 # Script usage: python /path/aptrust_aip.py /path/aips_directory
 
@@ -222,6 +224,11 @@ def log(log_path, log_row):
         log_writer.writerow(log_row)
 
 
+# Prints a message about the version of the script, in case the user meant to select the other branch.
+print('\nRunning the "no-zip" branch of the APTrust transformation script.')
+print('All AIPs should be unzipped and untarred prior to running the script.')
+print('Bags must be tarred, using zipall.cmd, after running the script.\n')
+
 # Gets the directory from the script argument. If it is missing, prints an error and quits the script.
 try:
     aips_directory = sys.argv[1]
@@ -328,7 +335,7 @@ for item in os.listdir():
         log(log_path, [item, f"The transformed bag is not valid: {errors}", "Incomplete"])
         move_error("transformed_bag_not_valid", item)
         aips_errors += 1
-        exit()
+        continue
 
     # Updates the log for the successfully transformed AIP.
     log(log_path, [item, "n/a", "Complete"])
