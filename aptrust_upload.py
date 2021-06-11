@@ -1,5 +1,9 @@
 # Use APTrust Partner Tools to validate and upload a batch of AIPs which are all in the same folder (AIPs directory).
-# Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools
+
+# Script usage: python path/batch_validate.py aptrust_type path/aips_directory path/partner_tools
+#   aptrust_type is production or demo
+#   aips_directory is the folder with the AIPs to be uploaded
+#   partner_tools is the folder with the APTrust Partner Tools
 
 import csv
 import datetime
@@ -15,7 +19,7 @@ def validate_arguments(arguments_list):
     directory the current directory and calculates additional paths. """
 
     # The script usage information is used in many error statements.
-    script_usage = "Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools"
+    script_usage = "Script usage: python path/batch_validate.py aptrust_type path/aips_directory path/partner_tools"
 
     # Checks for any missing or extra arguments.
     if len(arguments_list) != 4:
