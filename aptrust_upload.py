@@ -1,7 +1,38 @@
 # Use APTrust Partner Tools to validate and upload a batch of AIPs which are all in the same folder (AIPs directory).
-# Script usage: python C:/path/batch_validate.py C:/path/partner_tools C:/path/aips_directory production|demo
+# Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools
 
-# Validate script arguments. Make AIPS directory the current directory and make paths to tools to use.
+import sys
+
+
+def validate_arguments(arguments_list):
+    """Verifies the three required arguments were provided for running the script: a path to the APTrust partner
+    tools, a path to the AIPs directory, and if the AIPs are to be uploaded to production or demo. If any are missing
+    or not an expected value, prints an error message and quits the script. If they are present, makes the AIPs
+    directory the current directory and calculates additional paths. """
+
+    # The script usage information is used in many error statements.
+    script_usage = "Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools"
+
+    # Check for any missing or extra arguments.
+    if len(arguments_list) != 4:
+        print(f"The incorrect number of script arguments was provided.\n{script_usage}")
+        exit()
+
+    # Exits the script if the provided APTrust type is not one of the two expected values, production or demo.
+    aptrust_type = sys.argv[1]
+    if aptrust_type not in ("production", "demo"):
+        print(f'The APTrust type must be "production" or "demo".\n{script_usage}')
+        exit()
+
+    # Makes the provided path to the AIPs directory the current directory.
+    # Exits the script if it does not exist or it is a file instead of a directory.
+
+    # Make paths to specific tools and files with the provided path to the partner tools.
+    # Exits the script if any do not exist.
+
+
+# Validate script arguments.
+validate_arguments(sys.argv)
 
 # Start tracking counts for summarizing script results.
 
