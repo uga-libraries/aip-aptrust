@@ -2,6 +2,7 @@
 # Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools
 
 import os
+import subprocess
 import sys
 
 
@@ -66,15 +67,17 @@ for item in os.listdir("."):
         continue
 
     # Prints the current AIP to show the script's progress.
-    print("Starting upload for:", item)
+    print("Starting one:", item)
 
-    # Run apt_validate.
+    # Validates the AIP using the Partner Tool apt_validate.
+    result = subprocess.run(f'{apt_validate} --config={config_validate} "{os.path.join(os.getcwd(), item)}"',
+                            capture_output=True, shell=True)
 
-    # Interpret apt_validate results.
+    # Add results to log.
 
-        # Add results to log.
-
-        # If not valid, start the next AIP.
+    # If not valid, do not upload. Start the next AIP.
+    if not result.returncode == 0:
+        continue
 
     # Run apt_load.
 
