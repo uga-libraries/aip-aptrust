@@ -329,7 +329,7 @@ for item in os.listdir():
         regex = re.match("^(.*_bag).", item)
         aip_bag_name = regex.group(1)
     except AttributeError:
-        log(log_path, [item, "Bag name is not formatted aip-id_bag", "Incomplete"])
+        log(log_path, [item, "AIP file name does not include aip-id_bag", "Incomplete"])
         move_error("bag_name", item, item)
         aips_errors += 1
         continue
