@@ -15,7 +15,7 @@ def validate_arguments(arguments_list):
     # The script usage information is used in many error statements.
     script_usage = "Script usage: python C:/path/batch_validate.py aptrust_type(production|demo) C:/path/aips_directory C:/path/partner_tools"
 
-    # Check for any missing or extra arguments.
+    # Checks for any missing or extra arguments.
     if len(arguments_list) != 4:
         print(f"The incorrect number of script arguments was provided.\n{script_usage}")
         exit()
@@ -37,6 +37,16 @@ def validate_arguments(arguments_list):
 
     # Make paths to specific tools and files with the provided path to the partner tools.
     # Exits the script if any do not exist.
+    tools = arguments_list[3]
+    apt_validate = os.path.join(tools, "apt_validate.exe")
+    apt_upload = os.path.join(tools, "apt_upload.exe")
+    config_validate = os.path.join(tools, "aptrust_bag_validation_config.json")
+    credentials = os.path.join(tools, f"{aptrust_type}.conf")
+
+    for path in (tools, apt_validate, apt_upload, config_validate, credentials):
+        if not os.path.exists(path):
+            print(f"{path} is incorrect.\n{script_usage}")
+            exit()
 
 
 # Validate script arguments.
