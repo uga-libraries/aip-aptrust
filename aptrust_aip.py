@@ -363,7 +363,7 @@ for item in os.listdir():
 
     # Validates the AIP against the APTrust character length requirements for directories and files.
     # Produces a list for staff review and stops processing this AIP if any are 0 characters or more than 255.
-    # the list is moved to the error folder, along with the bag, once the error folder is made.
+    # The list is moved to the error folder, along with the bag, once the error folder is made.
     length_ok = length_check(aip_bag_path, aip_bag_name)
     if not length_ok:
         log(log_path, [item, "Name(s) outside the character limit", "Incomplete"])
