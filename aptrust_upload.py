@@ -53,6 +53,14 @@ def validate_arguments(arguments_list):
     return apt_validate_path, apt_upload_path, config_validate_path, credentials_path
 
 
+def log(log_row):
+    """Add a row of text to the upload log for later staff review."""
+
+    with open("aptrust_upload_log.csv", "a", newline="") as log_file:
+        log_writer = csv.writer(log_file)
+        log_writer.writerow(log_row)
+
+
 # Validates the script arguments and quits the script if there are any errors.
 # Otherwise, changes the current directory to the AIPs directory the current directory, and gets tool and file paths.
 apt_validate, apt_upload, config_validate, credentials = validate_arguments(sys.argv)
@@ -63,9 +71,7 @@ validation_errors = 0
 
 # Starts a log, if it doesn't already exist from uploading a previous batch of AIPs.
 if not os.path.exists("aptrust_upload_log.csv"):
-    with open("aptrust_upload_log.csv", "w", newline="") as log_file:
-        log_writer = csv.writer(log_file)
-        log_writer.writerow(["AIP", "Validation", "Validation Date", "Validation_Errors"])
+    log(["AIP", "Validation", "Validation Date", "Validation_Errors"])
 
 # Validate each AIP and upload it to APTrust if it is valid.
 for item in os.listdir("."):
@@ -84,22 +90,17 @@ for item in os.listdir("."):
 
     # If not valid, does not upload. Adds this AIP to the log, updates the error counter, and starts on the next AIP.
     if not result.returncode == 0:
-        with open("aptrust_upload_log.csv", "a", newline="") as log_file:
-            log_writer = csv.writer(log_file)
-            log_writer.writerow([item, "Not Valid", datetime.datetime.today(),
-                                 result.stdout.decode('UTF-8').replace("\n", "; ")])
+        log([item, "Not Valid", datetime.datetime.today(), result.stdout.decode('UTF-8').replace("\n", "; ")])
         validation_errors += 1
         continue
 
-    # Adds results to list which be used for the log.
+    # Adds results to list which be used for the log, once the upload result is obtained.
     to_log = [item, "Valid", datetime.datetime.today(), "n/a"]
 
     # Run apt_load.
 
     # Adds this AIP to the log.
-    with open("aptrust_upload_log.csv", "a", newline="") as log_file:
-        log_writer = csv.writer(log_file)
-        log_writer.writerow(to_log)
+    log(to_log)
 
 # Print a summary of the script results.
 print(f"\nScript is complete, with {total_aips} AIPs processed.")
