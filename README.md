@@ -20,7 +20,7 @@ For Windows, install 7-Zip [https://www.7-zip.org/download.html](https://www.7-z
    
 The script undertakes the following steps on each AIP in the AIPs directory. If an anticipated error is encountered, the bag is moved to a folder named with the error to avoid further processing.
 
-   * Unzips and untars the AIP, resulting in a bag, and validates the bag.
+   * Validates the bag.
    
 
    * Verifies the bag meets APTrust limits:
