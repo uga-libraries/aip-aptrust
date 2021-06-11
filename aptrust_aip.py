@@ -29,10 +29,6 @@ def unpack(aip_zip):
     the AIP's bag directory, named aip_path-id_bag, which is saved to a folder named aptrust-aips within the AIPs
     directory. The original tar and zip files remain in the AIPs directory in case the script needs to be run again. """
 
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart unpack")
-
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
 
@@ -65,17 +61,9 @@ def unpack(aip_zip):
             os.makedirs("aptrust-aips")
         subprocess.run(f'tar -xf "{aip_zip}" -C aptrust-aips', shell=True)
 
-    # TODO: temporary end timestamp
-    end = datetime.datetime.now()
-    times.append(str(end-start))
-
 
 def size_check(aip_path):
     """Tests if the AIP's bag is smaller than the limit of 5 TB and returns True or False. """
-
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart size check")
 
     # Variable for calculating the total bag size.
     bag_size = 0
@@ -92,11 +80,6 @@ def size_check(aip_path):
             payload = line.split()[1]
             bag_size += float(payload)
 
-    # TODO: temporary end timestamp
-    end = datetime.datetime.now()
-    times.append(str(bag_size))
-    times.append(str(end - start))
-
     # Evaluates if the size is below the 5 TB limit and return the result (True or False).
     return bag_size < 5000000000000
 
@@ -105,10 +88,6 @@ def length_check(aip_path, aip_name):
     """Tests if all file and directory name lengths are at least one character but no more than 255 characters.
     Returns True if all names are within the limits or False if any names are outside the limits. Also creates a
     document with any names that are outside the limits for staff review. """
-
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart length check")
 
     # Makes a list to store lists with the path, name, and number of characters for each name outside the limits.
     # Each name's list will become a row in the character_limit_errors.csv.
@@ -141,14 +120,8 @@ def length_check(aip_path, aip_name):
             writer.writerow(["Path", "Name", "Length of Name"])
             for name_list in wrong_length:
                 writer.writerow(name_list)
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
         return False
     else:
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
         return True
 
 
@@ -176,10 +149,6 @@ def character_check(aip_path, aip_name):
 
         # If neither of the previous code blocks returned False, then all characters in the name are permitted.
         return True
-
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart character check")
 
     # Makes a list for file or directory names, including their full path, that contain impermissible characters.
     name_errors = []
@@ -209,15 +178,8 @@ def character_check(aip_path, aip_name):
             writer.writerow(["Name with Impermissible Characters"])
             for name_path in name_errors:
                 writer.writerow([name_path])
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        print("Time to character check (error):", end-start)
-        times.append(str(end - start))
         return False
     else:
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
         return True
 
 
@@ -225,10 +187,6 @@ def add_bag_metadata(aip_path, aip_name):
     """Adds additional fields to bagit-info.txt and adds a new file aptrust-info.txt to the bag metadata. The values
     for the metadata fields are either consistent for all UGA AIPs or are extracted from the preservation.xml file
     that is in the AIP's metadata folder. """
-
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart add bag metadata")
 
     # Namespaces that find() will use when navigating the preservation.xml.
     ns = {"dc": "http://purl.org/dc/terms/", "premis": "http://www.loc.gov/premis/v3"}
@@ -296,17 +254,9 @@ def add_bag_metadata(aip_path, aip_name):
     # edited file bagit-info.txt so the bag remains valid.
     bag.save(manifests=True)
 
-    # TODO: temporary end timestamp
-    end = datetime.datetime.now()
-    times.append(str(end - start))
-
 
 def tar_bag(aip_path):
     """Tars the bag, using the appropriate command for Windows (7zip) or Mac/Linux (tar) operating systems."""
-
-    # TODO: temporary start timestamp
-    start = datetime.datetime.now()
-    print("\tStart tar")
 
     # Gets the operating system, which determines the command for unzipping and untarring.
     operating_system = platform.system()
@@ -319,10 +269,6 @@ def tar_bag(aip_path):
         subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
     else:
         subprocess.run(f'tar -cf "{aip_path}.tar" "{aip_path}"', shell=True)
-
-    # TODO: temporary end timestamp
-    end = datetime.datetime.now()
-    times.append(str(end - start))
 
 
 def log(log_path, log_row):
@@ -369,30 +315,18 @@ for item in os.listdir():
     if not item.endswith("_bag"):
         continue
 
-    # TODO: temporary list for time log info.
-    times = [item]
-
     # Prints script progress to show it is still working.
     print("Starting transformation of:", item)
 
     # Validates the unpacked bag in case there was a problem during storage or unpacking.
     # Stops processing this AIP if the bag is invalid.
     try:
-        # TODO: temporary start timestamp
-        start = datetime.datetime.now()
-        print("\tStart validation")
         aip_bagit_object = bagit.Bag(item)
         aip_bagit_object.validate()
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
     except bagit.BagValidationError as errors:
         log(log_path, [item, f"The unpacked bag is not valid: {errors}", "Incomplete"])
         move_error("unpacked_bag_not_valid", item)
         aips_errors += 1
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
         continue
 
     # Validates the AIP against the APTrust size requirement.
@@ -445,31 +379,17 @@ for item in os.listdir():
     # Validates the bag in case there was a problem transforming it to an APTrust AIP.
     # Stops processing this AIP if the bag is invalid.
     try:
-        # TODO: temporary start timestamp
-        start = datetime.datetime.now()
-        print("\tStart validation")
         aip_bagit_object = bagit.Bag(item)
         aip_bagit_object.validate()
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
     except bagit.BagValidationError as errors:
         log(log_path, [item, f"The transformed bag is not valid: {errors}", "Incomplete"])
         move_error("transformed_bag_not_valid", item)
         aips_errors += 1
-        # TODO: temporary end timestamp
-        end = datetime.datetime.now()
-        times.append(str(end - start))
         exit()
 
     # Updates the log for the successfully transformed AIP.
     log(log_path, [item, "n/a", "Complete"])
     aips_transformed += 1
-
-    # TODO temporary time log
-    with open("time_log.csv", "a", newline="") as time_file:
-        time_writer = csv.writer(time_file)
-        time_writer.writerow(times)
 
 # Prints summary information about the script's success.
 script_end = datetime.datetime.today()
