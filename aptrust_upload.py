@@ -59,10 +59,14 @@ apt_validate, apt_upload, config_validate, credentials = validate_arguments(sys.
 # Start log.
 
 # Validate each AIP and upload it to APTrust if it is valid.
+for item in os.listdir("."):
 
-    # Skip anything in the AIPs directory that is not an AIP (tar file).
+    # Skips anything in the AIPs directory that is not an AIP (tar file), like bag directories or log files.
+    if not item.endswith(".tar"):
+        continue
 
-    # Prints a progress message.
+    # Prints the current AIP to show the script's progress.
+    print("Starting upload for:", item)
 
     # Run apt_validate.
 
