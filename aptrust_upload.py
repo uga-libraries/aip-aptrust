@@ -93,7 +93,8 @@ for item in os.listdir("."):
     if result.returncode == 0:
         to_log = [item, "Valid", datetime.datetime.today(), "n/a"]
     else:
-        log([item, "Not Valid", datetime.datetime.today(), result.stdout.decode('UTF-8').replace("\n", "; ")])
+        log([item, f"Not Valid: {result.returncode}", datetime.datetime.today(),
+             result.stdout.decode('UTF-8').replace("\n", "; ")])
         validation_errors += 1
         continue
 
