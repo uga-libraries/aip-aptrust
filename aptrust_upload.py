@@ -58,6 +58,8 @@ def validate_arguments(arguments_list):
 apt_validate, apt_upload, config_validate, credentials = validate_arguments(sys.argv)
 
 # Start tracking counts for summarizing script results.
+total_aips = 0
+validation_errors = 0
 
 # Starts a log, if it doesn't already exist from uploading a previous batch of AIPs.
 if not os.path.exists("aptrust_upload_log.csv"):
@@ -72,19 +74,21 @@ for item in os.listdir("."):
     if not item.endswith(".tar"):
         continue
 
-    # Prints the current AIP to show the script's progress.
+    # Prints the current AIP to show the script's progress and updated total AIPs counter.
     print("Starting on:", item)
+    total_aips += 1
 
     # Validates the AIP using the Partner Tool apt_validate.
     result = subprocess.run(f'{apt_validate} --config={config_validate} "{os.path.join(os.getcwd(), item)}"',
                             capture_output=True, shell=True)
 
-    # If not valid, does not upload. Adds this AIP to the log and starts processing the next AIP.
+    # If not valid, does not upload. Adds this AIP to the log, updates the error counter, and starts on the next AIP.
     if not result.returncode == 0:
         with open("aptrust_upload_log.csv", "a", newline="") as log_file:
             log_writer = csv.writer(log_file)
             log_writer.writerow([item, "Not Valid", datetime.datetime.today(),
                                  result.stdout.decode('UTF-8').replace("\n", "; ")])
+        validation_errors += 1
         continue
 
     # Adds results to list which be used for the log.
@@ -98,3 +102,5 @@ for item in os.listdir("."):
         log_writer.writerow(to_log)
 
 # Print a summary of the script results.
+print(f"\nScript is complete, with {total_aips} AIPs processed.")
+print(validation_errors, "AIPs had validation errors.")
