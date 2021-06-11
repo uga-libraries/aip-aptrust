@@ -1,6 +1,10 @@
+# APTrust Transformation: Main Branch
+
 ## Purpose
 
 Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) to AIPs that can be ingested into APTrust to have geographically-distant storage. The AIPs are checked for if they meet APTrust requirements for maximum size and file/directory name length, additional bag metadata is added, and impermissible characters are replaced with underscores. The result of this script is tar files ready to ingest into APTrust.
+
+For AIPs over 20 GB, this version of the script is too slow. Instead, use the "no-zip" branch of this script.
 
 ## Dependencies
 
