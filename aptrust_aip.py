@@ -8,9 +8,6 @@ import bagit
 import csv
 import datetime
 import os
-import platform
-import re
-import subprocess
 import sys
 import xml.etree.ElementTree as et
 
@@ -22,44 +19,6 @@ def move_error(error_name, aip_name):
     if not os.path.exists(f"errors/{error_name}"):
         os.makedirs(f"errors/{error_name}")
     os.replace(aip_name, f"errors/{error_name}/{aip_name}")
-
-
-def unpack(aip_zip):
-    """Unzips (if applicable) and untars the AIP, using different commands for Windows or Mac/Linux. The result is
-    the AIP's bag directory, named aip_path-id_bag, which is saved to a folder named aptrust-aips within the AIPs
-    directory. The original tar and zip files remain in the AIPs directory in case the script needs to be run again. """
-
-    # Gets the operating system, which determines the command for unzipping and untarring.
-    operating_system = platform.system()
-
-    # For Windows, use 7-Zip to extract the files. If the AIP is both tarred and zipped, the command is run twice.
-    if operating_system == "Windows":
-
-        # Extracts the contents of the zip file, which is a tar file.
-        # Tests if there is a zip file first since some AIPs are just tarred and not zipped.
-        if aip_zip.endswith(".bz2"):
-            subprocess.run(f'7z x {aip_zip}', stdout=subprocess.DEVNULL, shell=True)
-
-        # Extracts the contents of the tar file, which is the AIP's bag directory.
-        # Saves the bag to a folder within the AIPs directory named aptrust-aips.
-        aip_tar = aip_zip.replace(".bz2", "")
-        aip_tar_path = os.path.join(aips_directory, aip_tar)
-        subprocess.run(f'7z x "{aip_tar_path}" -o{os.path.join(aips_directory, "aptrust-aips")}',
-                       stdout=subprocess.DEVNULL, shell=True)
-
-        # Deletes the tar file if there is also a zipped version of the AIP.
-        # This is only necessary for Windows, since in Mac/Linux the intermediate tar file is not saved separately.
-        # Now the AIPs directory only has the original ARCHive AIPs again, plus a folder with the unpacked bags.
-        if aip_zip.endswith(".bz2"):
-            os.remove(os.path.join(aips_directory, aip_zip.replace(".bz2", "")))
-
-    # For Mac and Linux, use tar to extract the AIP's bag directory.
-    # This command works if the AIP is tarred and zipped or if it is just tarred.
-    # Makes the aptrust-aips directory to save the bag to, if it doesn't already exist, before extracting.
-    else:
-        if not os.path.exists("aptrust-aips"):
-            os.makedirs("aptrust-aips")
-        subprocess.run(f'tar -xf "{aip_zip}" -C aptrust-aips', shell=True)
 
 
 def size_check(aip_path):
@@ -253,22 +212,6 @@ def add_bag_metadata(aip_path, aip_name):
     # Saves the bag, which updates the tag manifests with the new file aptrust-info.txt and the new checksums for the
     # edited file bagit-info.txt so the bag remains valid.
     bag.save(manifests=True)
-
-
-def tar_bag(aip_path):
-    """Tars the bag, using the appropriate command for Windows (7zip) or Mac/Linux (tar) operating systems."""
-
-    # Gets the operating system, which determines the command for unzipping and untarring.
-    operating_system = platform.system()
-
-    # Gets the absolute path to the bag.
-    bag_path = os.path.join(aips_directory, aip_path)
-
-    # Tars the AIP using the operating system-specific command, 7-zip for Windows and tar for Mac/Linux.
-    if operating_system == "Windows":
-        subprocess.run(f'7z -ttar a "{aip_path}.tar" "{bag_path}"', stdout=subprocess.DEVNULL, shell=True)
-    else:
-        subprocess.run(f'tar -cf "{aip_path}.tar" "{aip_path}"', shell=True)
 
 
 def log(log_path, log_row):
