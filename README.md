@@ -24,7 +24,7 @@ Save the AIPs to be transformed to a single folder (the AIPs directory) and run 
 1. Unzips and untars the AIP, resulting in a bag, and validates the bag.
 
 
-2. Verifies the bag meets APTrust requirements.
+2. Verifies the bag meets APTrust requirements. If they don't, this is included in the AIP transformation log. Additionally, separately logs are made for each AIP listing the file or directory names outside the character limit or impermissible characters.
    * The entire bag must be under 5 TB.
    * No file or directory name can be 0 characters or exceed 255 characters.
    * No file or directory name can start with a dash or include a newline, carriage return, tab, vertical tab, or ascii bell. 
