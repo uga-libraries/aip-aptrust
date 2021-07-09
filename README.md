@@ -31,7 +31,7 @@ The aips_directory is the path to the folder which contains the AIPs to be trans
    * Validates the bag.
    
 
-   * Verifies the bag meets APTrust requirements:
+   * Verifies the bag meets APTrust requirements. If they don't, this is included in the AIP transformation log. Additionally, separately logs are made for each AIP listing the file or directory names outside the character limit or impermissible characters.
       * The entire bag must be under 5 TB.
       * No file or directory name can be 0 characters or exceed 255 characters.
       * No file or directory name can start with a dash or include a newline, carriage return, tab, vertical tab, or ascii bell. 
@@ -43,6 +43,7 @@ The aips_directory is the path to the folder which contains the AIPs to be trans
       * **Internal-Sender-Description:** ARCHive group, to differentiate between departments
       * **Internal-Sender-Identifier:** the AIP ID
       * **Bag-Group-Identifier:** the archival collection or default text if it is not part of a collection
+
 
    * Adds a new file, aptrust-info.txt, to the bag metadata files. The aptrust-info.txt file uses default values or information from the preservation.xml file in the AIP.
 
