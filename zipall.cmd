@@ -1,0 +1,1 @@
+for /d %%X in (*) do 7z -ttar a "%%X.tar" "%%X\" -ssc
