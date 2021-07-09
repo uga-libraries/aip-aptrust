@@ -1,6 +1,9 @@
-# For pilot collaboration on digital preservation storage with Emory.
-# Batch transforms AIPs from ARCHive into AIPs compatible with APTrust.
-# Prior to running this script, export the AIPs from ARCHive and save to a folder (AIPs directory).
+"""Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) to AIPs that can be ingested into
+APTrust to have geographically-distant storage. The AIPs are checked for if they meet APTrust requirements for
+maximum size and file/directory name length, additional bag metadata is added, and file/directory names are checked
+for impermissible characters. The result of this script is tar files ready to ingest into APTrust.
+
+For AIPs over 20 GB, this version of the script is too slow. Instead, use the "no-zip" branch of this script. """
 
 # Script usage: python /path/aptrust_aip.py /path/aips_directory
 
