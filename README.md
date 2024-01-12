@@ -22,6 +22,11 @@ For AIPs over 20 GB, this version of the script is too slow. Instead, use the "n
 aptrust_aip.py
    * aips_directory (required): path to the folder which contains the AIPs to be transformed.
 
+aptrust_upload.py
+   * aptrust_type (required): production or demo
+   * aips_directory (required): path to the folder which contains the AIPs to be uploaded
+   * partner_tools (required): path to the folder with the APTrust Partner Tools, including your credentials
+
 ## Workflow
 
 Save the AIPs to be transformed to a single folder (the AIPs directory) and run the aptrust_aip.py script. 
