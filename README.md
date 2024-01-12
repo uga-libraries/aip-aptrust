@@ -37,6 +37,8 @@ These scripts were written for a pilot. We will add unit testing and testing gui
 
 ## Workflow
 
+### aptrust_aip.py
+
 Save the AIPs to be transformed to a single folder (the AIPs directory) and run the aptrust_aip.py script. 
 The script undertakes the following steps on each AIP in the AIPs directory. 
 If an anticipated error is encountered, the bag is moved to a folder named with the error to avoid further processing.
@@ -76,6 +78,17 @@ The script also creates an AIP transformation log (a CSV) with the name of each 
 output from any anticipated errors that were encountered, and if the AIP was successfully transformed. 
 Information for an AIP is saved to this log when an anticipated error is encountered 
 or after transformation is complete.
+
+### aptrust_upload.py
+
+Uploads a batch of AIPs to APTrust using the APTrust Partner Tools. For each AIP in a folder:
+
+1. Verifies the file is an AIP based on the file extension. Must end in ".tar".
+2. Validates the AIP using apt_validate.
+3. Uploads the AIP using apt_load.
+
+The script also creates a log with validation and upload results,
+and prints a summary of the number of AIPs with errors.
 
 ## Author
 
