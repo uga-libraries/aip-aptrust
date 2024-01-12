@@ -16,6 +16,7 @@ For AIPs over 20 GB, this version of the script is too slow. Instead, use the "n
 
 * bagit python library: pip install bagit
 * 7-Zip [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html) for Windows only
+* [APTrust Partner Tools](https://aptrust.github.io/userguide/partner_tools/)
 
 ### Script Arguments
 
