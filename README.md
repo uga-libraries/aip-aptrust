@@ -1,18 +1,20 @@
 # APTrust Transformation: Main Branch
 
-## Purpose
+## Overview
 
 Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) to AIPs that can be ingested into APTrust to have geographically-distant storage. The AIPs are checked for if they meet APTrust requirements for maximum size and file/directory name length, additional bag metadata is added, and file/directory names are checked for impermissible characters. The result of this script is tar files ready to ingest into APTrust.
 
 For AIPs over 20 GB, this version of the script is too slow. Instead, use the "no-zip" branch of this script.
 
-## Dependencies
+## Getting Started
+
+### Dependencies
 
 Install the bagit python library: pip install bagit
 
 For Windows, install 7-Zip [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html)
 
-## Script Usage
+### Script Arguments
 ```python aptrust_aip.py aips_directory```
 
 The aips_directory is the path to the folder which contains the AIPs to be transformed.
