@@ -76,3 +76,7 @@ The script also creates an AIP transformation log (a CSV) with the name of each 
 output from any anticipated errors that were encountered, and if the AIP was successfully transformed. 
 Information for an AIP is saved to this log when an anticipated error is encountered 
 or after transformation is complete.
+
+## Author
+
+Adriane Hanson, Head of Digital Stewardship, UGA Libraries
