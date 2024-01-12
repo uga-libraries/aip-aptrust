@@ -14,9 +14,8 @@ For AIPs over 20 GB, this version of the script is too slow. Instead, use the "n
 
 ### Dependencies
 
-Install the bagit python library: pip install bagit
-
-For Windows, install 7-Zip [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html)
+* bagit python library: pip install bagit
+* 7-Zip [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html) for Windows only
 
 ### Script Arguments
 ```python aptrust_aip.py aips_directory```
