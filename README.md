@@ -18,9 +18,9 @@ For AIPs over 20 GB, this version of the script is too slow. Instead, use the "n
 * 7-Zip [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html) for Windows only
 
 ### Script Arguments
-```python aptrust_aip.py aips_directory```
 
-The aips_directory is the path to the folder which contains the AIPs to be transformed.
+aptrust_aip.py
+   * aips_directory (required): path to the folder which contains the AIPs to be transformed.
 
 ## Workflow
 
