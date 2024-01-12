@@ -3,7 +3,8 @@
 ## Overview
 
 Transform AIPs from the UGA Libraries' digital preservation system (ARCHive) 
-to AIPs that can be ingested into APTrust to have geographically-distant storage. 
+to AIPs that can be ingested into APTrust to have geographically-distant storage
+for a pilot with Emory. 
 
 The AIPs are checked for if they meet APTrust requirements for maximum size and file/directory name length, 
 additional bag metadata is added, and file/directory names are checked for impermissible characters. 
