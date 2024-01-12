@@ -28,6 +28,13 @@ aptrust_upload.py
    * aips_directory (required): path to the folder which contains the AIPs to be uploaded
    * partner_tools (required): path to the folder with the APTrust Partner Tools, including your credentials
 
+### Testing
+
+To test aptrust_aip.py, run the script on small AIPs so that it is easy to predict what the correct result will be.
+To test aptrust_upload.py, use the demo.
+
+These scripts were written for a pilot. We will add unit testing and testing guidance if we move forward with APTrust.
+
 ## Workflow
 
 Save the AIPs to be transformed to a single folder (the AIPs directory) and run the aptrust_aip.py script. 
